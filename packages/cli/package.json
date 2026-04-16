@@ -1,0 +1,36 @@
+{
+  "name": "@p6t/cli",
+  "version": "0.0.0",
+  "description": "Developer CLI for p6t — extract, push, pull, and check translation coverage",
+  "type": "module",
+  "bin": {
+    "p6t": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build --compile src/index.ts --outfile dist/p6t",
+    "build:dev": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "i18n",
+    "translation",
+    "fbtee",
+    "cli",
+    "polyglot"
+  ],
+  "author": "",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "devDependencies": {
+    "@types/node": "^25.4.0",
+    "typescript": "^5.9.3"
+  }
+}
