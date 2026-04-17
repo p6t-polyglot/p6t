@@ -1,0 +1,37 @@
+import { Callout, Tabs, } from "nextra/components";
+
+{<h1 className="text-center font-extrabold md:text-5xl mt-8">p6t</h1>}
+
+<div className="mx-auto max-w-full w-220 text-center px-4 my-10">
+  {
+    <p className="text-lg mb-2 text-gray-600 md:text-2xl!">
+      Continuous i18n for React apps
+    </p>
+  }
+</div>
+
+p6t automates the localization (l10n) workflow, so that your CD pipeline stays continuous. Wrap your strings in `<fbt>` components and ship every feature in every language—automatically.
+
+{/*
+here should be a way to quickly grasp the concept:
+
+1. change text
+2. hit save/commit/push
+3. auto-translation runs
+4. translations are updated (purging of the old, translations of the new are added)
+5. new translations are available in the app immediately, no release blocking, no orphaned strings
+
+*/}
+
+
+Built on [fbtee](https://github.com/nkzw-tech/fbtee), the open-source successor to Facebook's fbt with over a decade of production support for billions of users.
+
+<Callout emoji="⚡">
+  No translation phase. No release blocking. No orphaned strings.
+</Callout>
+
+<div className="mt-16 mb-20 text-center">
+  [Get Started](/docs/getting-started) · [GitHub](https://github.com/p6t/p6t) ·
+  [npm](https://www.npmjs.com/org/p6t)
+</div>
+
