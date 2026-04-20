@@ -10,18 +10,33 @@ import { Callout, Tabs, } from "nextra/components";
   }
 </div>
 
-p6t automates the localization (l10n) workflow, so that your CD pipeline stays continuous. Wrap your strings in `<fbt>` components and ship every feature in every language—automatically.
+p6t (polyglot) automates the localization (l10n) workflow, so that your CD pipeline stays continuous. Wrap your strings in `<fbt>` components and ship every feature in every language—automatically.
 
-{/*
-here should be a way to quickly grasp the concept:
+```diff
+ function WelcomeHeading({ user }) {
+   return (
+-    <fbt desc="welcome heading">Welcome back.</fbt>
++    <fbt desc="welcome heading">
++      Welcome back, <fbt:param name="name">{user.name}</fbt:param>!
++    </fbt>
+   );
+ }
+```
 
-1. change text
-2. hit save/commit/push
-3. auto-translation runs
-4. translations are updated (purging of the old, translations of the new are added)
-5. new translations are available in the app immediately, no release blocking, no orphaned strings
+```bash
+$ p6t translate
+✓ 1 new string translated  →  es, fr, de
+✓ 1 orphaned string removed  →  es, fr, de
+```
 
-*/}
+<div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-6 pb-4">
+  <Tabs items={['EN', 'ES', 'FR', 'DE']}>
+    <Tabs.Tab>Welcome back, Alex!</Tabs.Tab>
+    <Tabs.Tab>¡Bienvenido de nuevo, Alex!</Tabs.Tab>
+    <Tabs.Tab>Bon retour, Alex !</Tabs.Tab>
+    <Tabs.Tab>Willkommen zurück, Alex!</Tabs.Tab>
+  </Tabs>
+</div>
 
 
 Built on [fbtee](https://github.com/nkzw-tech/fbtee), the open-source successor to Facebook's fbt with over a decade of production support for billions of users.

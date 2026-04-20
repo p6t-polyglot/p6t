@@ -4,8 +4,8 @@ import { ReactNode } from 'react'
 
 export const metadata = {
   title: {
-    default: 'P6T - Continuous i18n for React',
-    template: '%s | P6T'
+    default: 'p6t - Continuous i18n for React',
+    template: '%s | p6t'
   },
   description: 'Ship every feature in every language—automatically. No translation phase. No release blocking. No dead keys.',
 }
@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
         <header className="fixed top-0 z-20 w-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
           <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-            <a href="/" className="text-xl font-bold">P6T</a>
+            <a href="/" className="text-xl font-bold">p6t</a>
             <div className="flex items-center gap-6">
               <a 
                 href="/docs" 
@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </main>
         <footer className="border-t border-neutral-200 dark:border-neutral-800 py-8 mt-16">
           <div className="mx-auto max-w-7xl px-6 text-sm text-neutral-600 dark:text-neutral-400">
-            MIT {new Date().getFullYear()} © P6T
+            MIT {new Date().getFullYear()} © p6t
           </div>
         </footer>
       </body>
