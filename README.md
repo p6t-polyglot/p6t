@@ -1,15 +1,18 @@
 # p6t (polyglot)
 
-Auto-translation platform built on [fbtee](https://github.com/nkzw-tech/fbtee).
+Auto-translation platform. Wraps your existing i18n library with a translation pipeline and React SDK.
 
 ## Packages
 
 | Package | Description | Status |
 |---|---|---|
-| [`@p6t/core`](./packages/core) | Framework-agnostic translation engine | WIP |
-| [`@p6t/react`](./packages/react) | React SDK — components and hooks | WIP |
-| [`@p6t/cli`](./packages/cli) | Developer CLI — extract, push, pull, check | WIP |
+| [`@p6t/core`](./packages/core) | Framework-agnostic engine: locale detection, config resolution | WIP |
+| [`@p6t/lingui`](./packages/lingui) | Lingui adapter — `LocaleProvider`, hooks, Next.js middleware | WIP |
+| [`@p6t/fbtee`](./packages/fbtee) | fbtee adapter — `LocaleProvider`, hooks, Next.js middleware | WIP |
+| [`@p6t/cli`](./packages/cli) | Developer CLI — `p6t translate` pipeline | WIP |
 | [`apps/web`](./apps/web) | Hosted translator interface (Next.js) | WIP |
+
+Choose `@p6t/lingui` or `@p6t/fbtee` depending on which translation library your app uses.
 
 ## Toolchain
 
@@ -21,7 +24,6 @@ Auto-translation platform built on [fbtee](https://github.com/nkzw-tech/fbtee).
 | tsup | Build tool for `packages/*` |
 | Bun | Compile-only — produces the `@p6t/cli` binary |
 | Next.js | Web app framework (`apps/web`) |
-| fbtee | Translation base — `<fbt>` JSX components compiled via Babel |
 | Changesets | Versioning and changelog |
 
 ## Getting started
@@ -42,7 +44,8 @@ pnpm dev
 │
 ├── packages/
 │   ├── core/                   # @p6t/core — framework-agnostic logic
-│   ├── react/                  # @p6t/react — primary React SDK
+│   ├── lingui/                 # @p6t/lingui — Lingui adapter
+│   ├── fbtee/                  # @p6t/fbtee — fbtee adapter
 │   └── cli/                    # @p6t/cli — developer CLI
 │
 ├── turbo.json
@@ -50,19 +53,17 @@ pnpm dev
 └── package.json
 ```
 
-## fbtee translation pipeline
+## Translation pipeline
 
-String collection runs inside `apps/web`, pointing at all consumed source including packages:
+`p6t translate` sits between `lingui extract` / `fbtee:collect` and the compile step:
 
 ```bash
-# collect strings from source
-pnpm --filter web fbtee:collect
+# Lingui
+lingui extract && p6t translate && lingui compile
 
-# compile translated strings into runtime payload
-pnpm --filter web fbtee:translate
+# fbtee
+pnpm fbtee:collect && p6t translate && pnpm fbtee:translate
 ```
-
-Run `fbtee:collect` before uploading to a translation provider. Run `fbtee:translate` after pulling translations back.
 
 ## Versioning and publishing
 
@@ -74,7 +75,7 @@ pnpm changeset version  # bump versions + update CHANGELOGs
 pnpm changeset publish  # publish to npm
 ```
 
-`@p6t/core`, `@p6t/react`, and `@p6t/cli` are published to npm. `apps/web` is private.
+`@p6t/core`, `@p6t/lingui`, `@p6t/fbtee`, and `@p6t/cli` are published to npm. `apps/web` is private.
 
 ## Future
 

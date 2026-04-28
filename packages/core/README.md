@@ -17,8 +17,8 @@ It has **no dependency on React, fbtee, or any JSX runtime**. This is what makes
 
 ## What this package does NOT do
 
-- No `<fbt>` JSX components — those live in `@p6t/react`
-- No UI, no rendering, no framework assumptions
+- No `<fbt>` JSX components — those live in `@p6t/fbtee`
+- No Lingui providers — those live in `@p6t/lingui`
 
 ## Installation
 

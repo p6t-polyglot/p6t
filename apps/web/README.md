@@ -12,7 +12,7 @@ Also serves as the primary reference implementation for fbtee + Next.js integrat
 - TypeScript
 - Tailwind CSS
 - fbtee (via `@nkzw/babel-preset-fbtee`)
-- `@p6t/react` and `@p6t/core` from this monorepo
+- `@p6t/fbtee` and `@p6t/core` from this monorepo
 
 ## fbtee setup
 

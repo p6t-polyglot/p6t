@@ -2,7 +2,7 @@
 
 ## Project
 
-p6t is an early-stage auto-translation platform built on [fbtee](https://github.com/nkzw-tech/fbtee). Packages are published; the web app is private.
+p6t is an early-stage auto-translation platform. It supports both [fbtee](https://github.com/nkzw-tech/fbtee) and [Lingui](https://lingui.dev/) as translation libraries. Packages are published; the web app is private.
 
 ## Package manager
 
@@ -18,7 +18,8 @@ pnpm install --frozen-lockfile # CI / reproducible
 | Path | Package | Published |
 |---|---|---|
 | `packages/core` | `@p6t/core` | yes |
-| `packages/react` | `@p6t/react` | yes |
+| `packages/lingui` | `@p6t/lingui` | yes |
+| `packages/fbtee` | `@p6t/fbtee` | yes |
 | `packages/cli` | `@p6t/cli` | yes |
 | `apps/web` | (web) | no — ignored by Changesets |
 | `apps/docs` | `@p6t/docs` | no |

@@ -1,0 +1,45 @@
+# Architecture
+
+> This page documents p6t's intended design. The packages are under active development; not all of this is implemented yet.
+
+## Packages
+
+| Package | Role |
+|---|---|
+| `@p6t/core` | Framework-agnostic engine: locale detection, config resolution, pluralisation |
+| `@p6t/lingui` | Lingui adapter: `LocaleProvider`, helpers, Next.js middleware |
+| `@p6t/fbtee` | fbtee adapter: `LocaleProvider`, helpers, Next.js middleware |
+| `@p6t/cli` | Translation pipeline CLI — the `p6t translate` command |
+
+Choose `@p6t/lingui` or `@p6t/fbtee` depending on which translation library your app uses. You do not use both.
+
+`@p6t/core` has **zero fbtee dependency** by design, keeping it viable for future React Native and native (Swift/Kotlin) targets.
+
+## The translation pipeline
+
+p6t sits between the extraction step and the compile step of whichever library you use:
+
+```bash
+# Lingui
+lingui extract && p6t translate && lingui compile
+
+# fbtee
+pnpm fbtee:collect && p6t translate && pnpm fbtee:translate
+```
+
+`p6t translate` does one thing: read untranslated strings from the extracted catalogs, send them to a translation service (an LLM or otherwise), and write the results back.
+
+When to run it depends on your integration — it fits anywhere between extraction and compilation (CI step, git hook, manual invocation, etc.).
+
+## Configuration
+
+Config lives in **`i18n.json`** at the project root.
+
+## What p6t does NOT do
+
+The CLI is purely a translation pipeline. The following concerns are handled by the adapter packages:
+
+- **Locale detection** — `@p6t/core`, surfaced through `@p6t/lingui` or `@p6t/fbtee`
+- **Next.js locale proxying / middleware** — `@p6t/lingui` or `@p6t/fbtee`
+- **React context with Intl-based formatters** — `@p6t/lingui` or `@p6t/fbtee` (`LocaleProvider`)
+- **Routing and font loading** — your app

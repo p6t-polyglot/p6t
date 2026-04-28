@@ -1,0 +1,88 @@
+# @p6t/fbtee
+
+> This page documents p6t's intended design. The package is under active development; not all of this is implemented yet.
+
+## What it provides
+
+`@p6t/fbtee` is the fbtee adapter for p6t. fbtee strings are compiled at build time via the `@nkzw/babel-preset-fbtee` Babel transform — this package handles the runtime layer. It adds:
+
+- `LocaleProvider` — Client Component providing locale and pre-configured Intl formatters to the client tree
+- `initLocale(lang)` — server-side initialisation helper (call in Server Component layouts)
+- `loadTranslations(lang)` — loads the compiled fbtee translation payload for a given locale
+- `useLocale()` — hook exposing `{ locale, formatDate, formatNumber, formatCurrency, ... }`
+- Next.js middleware for public-page locale detection and URL-segment routing
+
+Note: the Babel transform must be configured in the consuming app (`apps/web/babel.config.js`). This package handles only the runtime.
+
+## Root layout pattern
+
+The Server Component layout owns `<html lang>` and server-side initialisation; `LocaleProvider` is the Client Component boundary:
+
+```tsx
+// app/[lang]/layout.tsx
+import { loadTranslations, initLocale } from '@p6t/fbtee/server'
+import { LocaleProvider } from '@p6t/fbtee'
+
+export default async function RootLayout({ children, params }) {
+  const { lang } = await params
+  initLocale(lang)
+
+  return (
+    <html lang={lang}>
+      <body>
+        <LocaleProvider locale={lang} translations={loadTranslations(lang)}>
+          {children}
+        </LocaleProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+`LocaleProvider` is locale-source-agnostic — it only cares about the value it receives.
+
+## Locale sources by page type
+
+| Context | Locale source | URL shape |
+|---|---|---|
+| Public pages | Middleware → URL segment | `/en/about` |
+| Private pages | User profile fetch (already happening for auth) | `/dashboard` |
+| Sign-in / sign-up | Cookie (no auth fetch, no URL segment needed) | `/login` |
+
+### Public pages
+
+`@p6t/fbtee` ships Next.js middleware that reads `Accept-Language` and matches against the locales in `i18n.json`. It redirects to a locale-prefixed path. Scope the middleware matcher to public routes only.
+
+### Private pages
+
+The private layout fetches the session server-side for auth anyway; the user's preferred locale comes along for free:
+
+```tsx
+// app/(private)/layout.tsx
+export default async function PrivateLayout({ children }) {
+  const user = await getSession()
+  initLocale(user.locale)
+
+  return (
+    <LocaleProvider locale={user.locale} translations={loadTranslations(user.locale)}>
+      {children}
+    </LocaleProvider>
+  )
+}
+```
+
+## `useLocale()` hook
+
+```tsx
+const { locale, formatDate, formatNumber, formatCurrency } = useLocale()
+```
+
+## generateStaticParams
+
+```tsx
+import { locales } from '@p6t/fbtee'
+
+export function generateStaticParams() {
+  return locales.map((lang) => ({ lang }))
+}
+```
