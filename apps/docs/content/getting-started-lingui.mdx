@@ -1,26 +1,42 @@
 # Getting Started
 
-To get started with p6t, paste this into the AI assistant of your choice (Opencode, Claude Code, Cursor, etc.):
+To get started with p6t and Lingui, paste this into the AI assistant of your choice (OpenCode, Claude Code, Cursor, etc.):
 
 ```txt
 I'd like to internationalize my React app with p6t and Lingui.
 
-1. Let's define the UX for our users. What languages are available to them and how do they select them?
-2. Since Lingui is integrated with a compile step, we need to set it up with our build system. Check https://lingui.dev/ for options.
-3. Let's define the languages that we want to support to begin with. We can always add more later
-    All selected languages should be configured through ./i18n.json
-4. Set up our LocaleContext and LocaleProvider to manage the current locale in our app.
-5. Wrap our strings in <Trans> components and add descriptions for translators.
-6. Run p6t translate to sync our strings with the translation service and get translations for our supported languages.
-7. Test our app in different locales to ensure the translations are working correctly.
+1. Let's define the UX for our users. What languages are available to them and how do
+   they select them? Consider SEO for public pages and storing locale preference in the
+   user profile for authenticated pages. For sign-in/sign-up, a locale cookie works
+   without a URL segment.
 
-For each of the above steps, please make suggestions based on your available knowledge and best practices and
-ask me for any additional information or confirmation. Also make sure you allow me to ask for additional context
-or clarification at any point.
+2. Since Lingui is integrated with a compile step, we need to set it up with our build
+   system. Check https://lingui.dev/ for options. Make sure every new string includes
+   a description so translators and the LLM have the context they need.
 
-Consider the actual best practices.
+3. Let's define the languages we want to support to begin with. We can always add more
+   later. All selected languages should be configured in ./i18n.json (the p6t config).
 
-For example for the languages available to users, we might consider SEO for public pages and saving things to a user profile in case we have a user account.
-For Lingui, we consider how we make sure that we have a workflow that ensures new developers and agents automatically
-integrate it well, meaning every new string comes with a description.
+4. Run `p6t init` to scaffold i18n.json and the translation context files
+   (i18n/description.md, per-locale style guides, per-locale glossaries). The init
+   command can use the LLM to draft these from your README and existing source strings.
+   Review and commit the generated files.
+
+5. Set up our LocaleContext and LocaleProvider to manage the current locale in our app.
+
+6. Wrap our strings in <Trans> components and add descriptions for translators.
+
+7. Run the full pipeline: `lingui extract && p6t translate && lingui compile`
+   p6t translate reads untranslated strings from the .po files, sends them to the LLM
+   with the context files as guidance, and writes the results back.
+
+8. Test our app in different locales to ensure the translations are working correctly.
+
+For each of the above steps, please make suggestions based on your available knowledge
+and best practices and ask me for any additional information or confirmation. Also make
+sure you allow me to ask for additional context or clarification at any point.
+
+Consider the actual best practices. For example, for Lingui, ensure that every new
+string comes with a description so the LLM and human translators have the context they
+need to do a good job.
 ```

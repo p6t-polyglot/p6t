@@ -82,7 +82,13 @@ Use the explore tool sparingly. Reading config files and a handful of source fil
 
 ## Design philosophy
 
-When facing a judgement call on software design, ask: "What would Kent Beck say?" Prefer simplicity, small safe steps, and making the design reflect the problem. Avoid over-engineering.
+Every session (unless it's a direct technical task) starts with framing, then moves on to shaping and finally goes into implementation. Sometimes these phases are very quick, but they almost always exist.
+
+During framing, we're wondering what the application user is really trying to do and how they feel in that moment. Then shape a conceptual solution — not a spec — that leaves room for good implementation decisions. This is providing enough room for a very senior developer or a very senior designer to still make great decisions during implementation while setting a clear direction.
+
+The first time to ask "What would Kent Beck say?" is during shaping, when you feel the pull toward complexity: defensive caps, premature abstraction, speculative features. Stop there. Simplify the shape before presenting the plan. Then during implementation or during design again ask yourself "What would Kent Beck say?" and apply this to the trade-offs that you're making, the variable names you're using and the way you're thinking about refactoring existing code.
+
+Prefer simplicity, small safe steps, and making the design reflect the problem. Avoid over-engineering.
 
 ## Releases (Changesets)
 

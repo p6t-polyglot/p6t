@@ -1,6 +1,6 @@
 # p6t (polyglot)
 
-Auto-translation platform. Wraps your existing i18n library with a translation pipeline and React SDK.
+Auto-translation platform. Wraps your existing i18n library with an LLM-powered translation pipeline and React SDK.
 
 ## Packages
 
@@ -9,8 +9,8 @@ Auto-translation platform. Wraps your existing i18n library with a translation p
 | [`@p6t/core`](./packages/core) | Framework-agnostic engine: locale detection, config resolution | WIP |
 | [`@p6t/lingui`](./packages/lingui) | Lingui adapter — `LocaleProvider`, hooks, Next.js middleware | WIP |
 | [`@p6t/fbtee`](./packages/fbtee) | fbtee adapter — `LocaleProvider`, hooks, Next.js middleware | WIP |
-| [`@p6t/cli`](./packages/cli) | Developer CLI — `p6t translate` pipeline | WIP |
-| [`apps/web`](./apps/web) | Hosted translator interface (Next.js) | WIP |
+| [`@p6t/cli`](./packages/cli) | Developer CLI — `p6t init`, `p6t translate`, push/pull | v0 |
+| [`apps/web`](./apps/web) | Hosted review interface (Next.js) | WIP |
 
 Choose `@p6t/lingui` or `@p6t/fbtee` depending on which translation library your app uses.
 
@@ -58,12 +58,22 @@ pnpm dev
 `p6t translate` sits between `lingui extract` / `fbtee:collect` and the compile step:
 
 ```bash
-# Lingui
+# Lingui (CLI v1)
 lingui extract && p6t translate && lingui compile
 
-# fbtee
+# fbtee (fbtee CLI support planned for v2)
 pnpm fbtee:collect && p6t translate && pnpm fbtee:translate
 ```
+
+`p6t translate` reads untranslated strings from extracted catalogs, sends them to an LLM (OpenAI, Anthropic, Google, Mistral, Ollama, or OpenRouter), and writes the results back. It never re-translates strings that are already translated.
+
+Translation quality is driven by three committed context files created by `p6t init`:
+
+| File | Purpose |
+|---|---|
+| `i18n/description.md` | Project description for translators — domain, users, vocabulary |
+| `i18n/{locale}/style-guide.md` | Per-locale tone, formality, and brand voice rules |
+| `i18n/{locale}/glossary.json` | Source → target term mapping for key vocabulary |
 
 ## Versioning and publishing
 

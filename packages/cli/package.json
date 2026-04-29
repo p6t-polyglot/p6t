@@ -30,7 +30,22 @@
   },
   "packageManager": "pnpm@10.32.1",
   "devDependencies": {
-    "@types/node": "^25.4.0",
+    "@types/gettext-parser": "^9.0.0",
+    "@types/node": "^25.6.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.72",
+    "@ai-sdk/google": "^3.0.65",
+    "@ai-sdk/mistral": "^3.0.31",
+    "@ai-sdk/openai": "^3.0.54",
+    "@clack/prompts": "^1.2.0",
+    "@lingui/conf": "^6.0.0",
+    "@openrouter/ai-sdk-provider": "^2.9.0",
+    "ai": "^6.0.169",
+    "ai-sdk-ollama": "^3.8.3",
+    "citty": "^0.2.2",
+    "gettext-parser": "^9.0.2",
+    "zod": "^3.25.76"
   }
 }

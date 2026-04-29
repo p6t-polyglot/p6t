@@ -1,0 +1,210 @@
+# @p6t/cli
+
+The p6t CLI translates missing strings in your Lingui catalogs using an LLM — no p6t account required, no web service in the critical path.
+
+```bash
+lingui extract && p6t translate && lingui compile
+```
+
+## Installation
+
+```bash
+npm install -g @p6t/cli
+# or
+pnpm add -g @p6t/cli
+```
+
+## Commands
+
+### `p6t init`
+
+Interactively scaffold `i18n.json` and the translation context files. If you provide an LLM API key, it will draft `description.md`, per-locale style guides, and glossaries from your `README.md` and existing source strings.
+
+```bash
+p6t init
+```
+
+**What it creates:**
+
+```
+i18n.json
+i18n/
+  description.md               ← what the project is (shared, English)
+  de/
+    style-guide.md             ← tone, formality, brand voice for German
+    glossary.json              ← key term translations for German
+  fr/
+    style-guide.md
+    glossary.json
+```
+
+All generated files should be reviewed and committed. They are the long-lived source of translation quality for your project.
+
+---
+
+### `p6t translate`
+
+Translate all missing strings across every target locale, or a single locale with `--locale`.
+
+```bash
+p6t translate
+p6t translate --locale de
+```
+
+**Behaviour:**
+
+- Reads catalog paths from your `lingui.config.*` automatically via `@lingui/conf`
+- Only translates strings with an empty or fuzzy `msgstr` — existing translations are never overwritten
+- Sends strings in batches; each batch receives the full context (description, style guide, glossary)
+- Writes results back to the `.po` files and clears the fuzzy flag
+
+---
+
+### `p6t push` / `p6t pull`
+
+Upload translations to the p6t web app for human review, or pull confirmed overrides back. These are stubs in v1 — the web integration ships in a future release.
+
+The CLI is designed so that web downtime **never** blocks `p6t translate`. Push and pull are purely additive.
+
+---
+
+## `i18n.json` reference
+
+```json
+{
+  "$schema": "https://p6t.dev/schema/i18n.json",
+  "version": 1,
+  "locale": {
+    "source": "en",
+    "targets": ["de", "fr", "es"]
+  },
+  "provider": {
+    "id": "openai",
+    "model": "gpt-4o",
+    "prompt": "Optional system prompt override",
+    "baseUrl": "https://custom-endpoint.example.com/v1"
+  },
+  "context": {
+    "description": "i18n/description.md",
+    "styleGuide": "i18n/{locale}/style-guide.md",
+    "glossary": "i18n/{locale}/glossary.json"
+  },
+  "projectId": "proj_abc123"
+}
+```
+
+### `locale`
+
+| Field | Required | Description |
+|---|---|---|
+| `source` | yes | Locale your source strings are written in (e.g. `en`) |
+| `targets` | yes | Locales to translate into |
+
+### `provider`
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | yes | `openai` · `anthropic` · `google` · `mistral` · `ollama` · `openrouter` |
+| `model` | yes | Model name (e.g. `gpt-4o`, `claude-sonnet-4-5`) |
+| `prompt` | no | Replaces the default system prompt entirely |
+| `baseUrl` | no | Override API base URL (useful for proxies or Ollama) |
+
+API keys come from environment variables.
+
+### `context`
+
+Paths to the context files. `{locale}` is replaced with the target locale at runtime. All paths are relative to the directory containing `i18n.json`. All fields are optional — missing files are silently skipped.
+
+### `projectId`
+
+Ties this local project to a p6t web project. Required for `push`/`pull` once web integration ships.
+
+---
+
+## Environment variables
+
+| Variable | Description |
+|---|---|
+| `OPENAI_API_KEY` | Required for `provider.id: "openai"` |
+| `ANTHROPIC_API_KEY` | Required for `provider.id: "anthropic"` |
+| `GOOGLE_AI_API_KEY` or `GEMINI_API_KEY` | Required for `provider.id: "google"` |
+| `MISTRAL_API_KEY` | Required for `provider.id: "mistral"` |
+| `OPENROUTER_API_KEY` | Required for `provider.id: "openrouter"` |
+| `P6T_API_KEY` | Required for `p6t push` / `p6t pull` (web integration) |
+
+Ollama requires no API key. Set `provider.baseUrl` if your server isn't at `localhost:11434`.
+
+---
+
+## Context files
+
+Translation quality depends on context. The three files below are sent to the LLM as part of the system prompt on every call.
+
+### `i18n/description.md`
+
+A plain-language brief for translators. Cover:
+
+- What the product does and who uses it
+- Industry or domain (affects vocabulary — "cancer" means something different in a medical app vs. an astrology app)
+- Any important terminology or concepts translators should understand
+
+One file, shared across all locales.
+
+### `i18n/{locale}/style-guide.md`
+
+Per-locale translation rules. Typical sections:
+
+- **Formality** — formal (`Sie`) vs. informal (`du`) in German; `vous` vs. `tu` in French
+- **Tone** — professional, friendly, playful?
+- **Brand voice** — words or phrases to avoid; preferred alternatives
+- **Punctuation** — locale-specific conventions (e.g. French space before `!`)
+- **Numbers and dates** — preferred formats
+
+### `i18n/{locale}/glossary.json`
+
+A flat JSON object mapping source-language terms to their required target translations:
+
+```json
+{
+  "checkout": "Kasse",
+  "dashboard": "Dashboard",
+  "subscription": "Abonnement"
+}
+```
+
+The LLM is instructed to use these exact translations whenever the terms appear. Keep it focused on terms that are genuinely ambiguous or have a strong brand preference — don't try to list every word.
+
+---
+
+## Translation format
+
+Strings are sent to the LLM in a compact `---`-delimited block format:
+
+```
+---
+id: cart_item_count
+source: You have {count, plural, one {# item} other {# items}}
+context: Cart summary shown at the top of the checkout page
+ref: src/Cart.tsx:42
+---
+id: submit_button
+source: Submit order
+```
+
+The LLM responds with translations in the same structure. ICU message syntax (plurals, select, variables) is preserved — the LLM is instructed to produce the correct plural categories for each target locale without needing to be told what those categories are.
+
+---
+
+## Lingui setup
+
+The CLI discovers catalog paths from your `lingui.config.*` or `package.json` `"lingui"` key automatically via `@lingui/conf`. No path duplication in `i18n.json`.
+
+For best translation results, make sure every string in your Lingui catalog has a description:
+
+```tsx
+// Good — LLM and human translators understand the context
+t({ message: 'Submit order', comment: 'Primary CTA on the checkout form' })
+
+// Less good — no context
+t`Submit order`
+```

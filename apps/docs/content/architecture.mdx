@@ -9,7 +9,7 @@
 | `@p6t/core` | Framework-agnostic engine: locale detection, config resolution, pluralisation |
 | `@p6t/lingui` | Lingui adapter: `LocaleProvider`, helpers, Next.js middleware |
 | `@p6t/fbtee` | fbtee adapter: `LocaleProvider`, helpers, Next.js middleware |
-| `@p6t/cli` | Translation pipeline CLI — the `p6t translate` command |
+| `@p6t/cli` | Translation pipeline CLI — `p6t init`, `p6t translate`, `p6t push/pull` |
 
 Choose `@p6t/lingui` or `@p6t/fbtee` depending on which translation library your app uses. You do not use both.
 
@@ -20,20 +20,63 @@ Choose `@p6t/lingui` or `@p6t/fbtee` depending on which translation library your
 p6t sits between the extraction step and the compile step of whichever library you use:
 
 ```bash
-# Lingui
+# Lingui (CLI v1)
 lingui extract && p6t translate && lingui compile
 
-# fbtee
+# fbtee (fbtee CLI support planned for v2)
 pnpm fbtee:collect && p6t translate && pnpm fbtee:translate
 ```
 
-`p6t translate` does one thing: read untranslated strings from the extracted catalogs, send them to a translation service (an LLM or otherwise), and write the results back.
+`p6t translate` does one thing: read untranslated strings from the extracted catalogs, send them to an LLM (using your own API key), and write the results back. It never overwrites an already-translated string.
 
 When to run it depends on your integration — it fits anywhere between extraction and compilation (CI step, git hook, manual invocation, etc.).
 
 ## Configuration
 
-Config lives in **`i18n.json`** at the project root.
+Config lives in **`i18n.json`** at the project root:
+
+```json
+{
+  "$schema": "https://p6t.dev/schema/i18n.json",
+  "version": 1,
+  "locale": {
+    "source": "en",
+    "targets": ["de", "fr", "es"]
+  },
+  "provider": {
+    "id": "openai",
+    "model": "gpt-4o"
+  },
+  "context": {
+    "description": "i18n/description.md",
+    "styleGuide": "i18n/{locale}/style-guide.md",
+    "glossary": "i18n/{locale}/glossary.json"
+  }
+}
+```
+
+`p6t init` scaffolds this file interactively and can use the LLM to draft the context files.
+
+## Translation context
+
+Good translation requires more than source text. p6t uses three committed context files that are sent to the LLM on every translation call:
+
+| File | Purpose |
+|---|---|
+| `i18n/description.md` | What the product is, who uses it, domain vocabulary. Shared across all locales. |
+| `i18n/{locale}/style-guide.md` | Per-locale rules: formality, tone, brand voice, punctuation, number formats. |
+| `i18n/{locale}/glossary.json` | Source → target term mapping. The LLM is instructed to use these exactly. |
+
+All three files are optional — p6t skips gracefully if they don't exist. All should be committed to version control.
+
+## Web integration (planned)
+
+The p6t web app is a human review layer, not a translation gateway. The CLI works fully standalone — web downtime never blocks `p6t translate`.
+
+- `p6t push` — upload source strings and AI translations to the web for human review or override
+- `p6t pull` — fetch confirmed translations back to local catalog files
+
+The web also serves as the canonical store for context files (description, style guides, glossaries) in team workflows.
 
 ## What p6t does NOT do
 

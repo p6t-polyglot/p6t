@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p6t.dev/schema/i18n.json",
+  "title": "p6t i18n configuration",
+  "description": "Configuration file for the p6t translation pipeline CLI.",
+  "type": "object",
+  "required": ["version", "locale", "provider"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference. Set to \"https://p6t.dev/schema/i18n.json\"."
+    },
+    "version": {
+      "const": 1,
+      "description": "Schema version. Must be 1."
+    },
+    "locale": {
+      "type": "object",
+      "description": "Source and target locales for the translation pipeline.",
+      "required": ["source", "targets"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "The locale your source strings are written in (e.g. \"en\", \"en-US\")."
+        },
+        "targets": {
+          "type": "array",
+          "description": "Locales to translate into.",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "description": "LLM provider used for translation. API keys are read from environment variables, never from this file.",
+      "required": ["id", "model"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "LLM provider identifier.",
+          "enum": ["openai", "anthropic", "google", "ollama", "openrouter", "mistral"]
+        },
+        "model": {
+          "type": "string",
+          "description": "Model name to use for translation (e.g. \"gpt-4o\", \"claude-sonnet-4-5\")."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Optional system prompt override. Replaces the default p6t prompt entirely."
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "Optional API base URL override. Useful for proxies, local Ollama, or custom endpoints."
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Paths to the translation context files sent to the LLM on every call. All paths are relative to the directory containing i18n.json. Use {locale} as a placeholder for the target locale.",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Path to the project description file (markdown). Shared across all locales. Default: \"i18n/description.md\".",
+          "default": "i18n/description.md"
+        },
+        "styleGuide": {
+          "type": "string",
+          "description": "Path template for the per-locale style guide (markdown). {locale} is replaced with the target locale. Default: \"i18n/{locale}/style-guide.md\".",
+          "default": "i18n/{locale}/style-guide.md"
+        },
+        "glossary": {
+          "type": "string",
+          "description": "Path template for the per-locale glossary (flat JSON object mapping source terms to target translations). {locale} is replaced with the target locale. Default: \"i18n/{locale}/glossary.json\".",
+          "default": "i18n/{locale}/glossary.json"
+        }
+      }
+    },
+    "projectId": {
+      "type": "string",
+      "description": "p6t web project identifier. Required for `p6t push` and `p6t pull`. Obtain this from the p6t web app."
+    }
+  }
+}
