@@ -1,43 +1,13 @@
 # @p6t/docs
 
-Nextra 4 documentation site for P6T.
+Nextra 4 documentation site for p6t.
 
-## Development
+## Vercel Deployment
 
-```bash
-pnpm install
-pnpm dev        # Runs on http://localhost:3001
-```
+1. Create a new project in the [Vercel Dashboard](https://vercel.com/new)
+2. Import the `p6t/p6t` repository
+3. Set **Root Directory** to `apps/docs`
+4. Framework Preset should auto-detect **Next.js**
+5. Deploy
 
-## Build
-
-```bash
-pnpm build      # Static export to dist/
-```
-
-## Project Structure
-
-```
-app/              # Next.js App Router
-├── layout.tsx    # Root layout with Nextra theme
-├── page.tsx      # Landing page (imports from content/)
-└── docs/
-    └── [[...mdx]]/    # Docs catch-all route (optional)
-
-content/          # MDX documentation pages
-├── _meta.ts      # Navigation configuration
-├── index.mdx     # Landing page content
-└── docs/         # Documentation section
-    ├── _meta.ts
-    ├── index.mdx
-    ├── workflow.mdx
-    ├── providers.mdx
-    ├── ci.mdx
-    └── api.mdx
-```
-
-## Technology
-
-- **Nextra 4**: Documentation framework with App Router support
-- **Next.js 15**: Static export for deployment
-- **MDX**: Markdown with React components
+Vercel will automatically traverse up to the monorepo root to find `pnpm-lock.yaml` and install workspace dependencies.
