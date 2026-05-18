@@ -2,8 +2,15 @@ import { generateText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { TranslationContext } from '../context/loader.ts'
 import { formatGlossary } from '../context/loader.ts'
-import type { TranslationUnit, TranslationResult } from '../lingui/catalog.ts'
+import type { TranslationUnit, TranslationResult } from '@p6t/core'
 import { serialiseUnits, parseResults } from './format.ts'
+
+export interface TranslationBatch {
+  results: TranslationResult[]
+  missing: TranslationUnit[]
+  /** Raw LLM response text for the last batch (useful for debugging). */
+  rawResponse: string | undefined
+}
 
 /** The seam for future experimentation — swap implementations freely. */
 export interface Translator {
@@ -12,7 +19,7 @@ export interface Translator {
     sourceLocale: string,
     targetLocale: string,
     ctx: TranslationContext,
-  ): Promise<TranslationResult[]>
+  ): Promise<TranslationBatch>
 }
 
 const DEFAULT_BATCH_SIZE = 200
@@ -57,6 +64,12 @@ function buildSystemPrompt(
       '- Never add, remove, or rename interpolation variables.',
       '- Never translate the `id` field.',
       '- Output one block per input string, delimited by `---`.',
+      '',
+      '## Expected output format',
+      '---',
+      'id: example_key',
+      'translation: Translated text goes here',
+      '---',
     ].join('\n'),
   )
 
@@ -87,8 +100,8 @@ export class DefaultTranslator implements Translator {
     sourceLocale: string,
     targetLocale: string,
     ctx: TranslationContext,
-  ): Promise<TranslationResult[]> {
-    if (units.length === 0) return []
+  ): Promise<TranslationBatch> {
+    if (units.length === 0) return { results: [], missing: [], rawResponse: undefined }
 
     const systemPrompt = buildSystemPrompt(
       sourceLocale,
@@ -97,6 +110,8 @@ export class DefaultTranslator implements Translator {
       this.customPrompt,
     )
     const results: TranslationResult[] = []
+    const missing: TranslationUnit[] = []
+    let lastRawResponse: string | undefined
 
     // Process in batches
     for (let i = 0; i < units.length; i += this.batchSize) {
@@ -109,21 +124,19 @@ export class DefaultTranslator implements Translator {
         prompt: userPrompt,
       })
 
+      lastRawResponse = text
       const batchResults = parseResults(text)
-
-      // Warn if a unit came back without a result (don't fail the whole batch)
       const returned = new Set(batchResults.map((r) => r.id))
+
       for (const unit of batch) {
         if (!returned.has(unit.id)) {
-          process.stderr.write(
-            `Warning: no translation returned for "${unit.id}"\n`,
-          )
+          missing.push(unit)
         }
       }
 
       results.push(...batchResults)
     }
 
-    return results
+    return { results, missing, rawResponse: lastRawResponse }
   }
 }

@@ -3,9 +3,8 @@ import path from "node:path";
 import * as p from "@clack/prompts";
 import { defineCommand } from "citty";
 import { generateText } from "ai";
-import { po } from "gettext-parser";
-import type { GetTextTranslations } from "gettext-parser";
 import { createModel, ProviderError } from "../llm/providers.ts";
+import { createAdapter } from "../catalog/adapter.ts";
 import type { Config } from "../config/schema.ts";
 
 const CONFIG_FILE = "i18n.json";
@@ -42,6 +41,57 @@ function resolveContextPath(
   cwd: string,
 ): string {
   return path.resolve(cwd, template.replace("{locale}", locale));
+}
+
+function detectFormatFromFiles(cwd: string): "lingui" | "react-intl" | null {
+  // Prefer .po files (Lingui)
+  for (const dir of ["locale", "locales", "src/locales", "src/locale"]) {
+    const full = path.join(cwd, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const entry of fs.readdirSync(full, { recursive: true }) as string[]) {
+      if (entry.endsWith(".po")) return "lingui";
+    }
+  }
+
+  // Check for JSON catalogs with defaultMessage keys (react-intl source)
+  for (const dir of [
+    "lang",
+    "src/lang",
+    "messages",
+    "src/messages",
+    "i18n",
+    "locales",
+    "src/locales",
+    "src/i18n",
+  ]) {
+    const full = path.join(cwd, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const entry of fs.readdirSync(full, { recursive: true }) as string[]) {
+      if (!entry.endsWith(".json")) continue;
+      const raw = readFileSafe(path.join(full, entry));
+      if (!raw) continue;
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (typeof parsed === "object" && parsed !== null) {
+          const values = Object.values(parsed as Record<string, unknown>);
+          if (
+            values.some(
+              (v) =>
+                typeof v === "object" &&
+                v !== null &&
+                "defaultMessage" in v,
+            )
+          ) {
+            return "react-intl";
+          }
+        }
+      } catch {
+        // ignore malformed JSON
+      }
+    }
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +193,6 @@ async function draftGlossary(
   });
 
   try {
-    // Strip possible markdown code fences
     const cleaned = text
       .replace(/^```[a-z]*\n?/m, "")
       .replace(/```$/m, "")
@@ -164,81 +213,6 @@ async function draftGlossary(
     // Fallback to empty — user can fill it in manually
   }
   return {};
-}
-
-// ---------------------------------------------------------------------------
-// Source string / translation pair extraction from .po files
-// ---------------------------------------------------------------------------
-
-function discoverPoFiles(cwd: string): string[] {
-  const candidates: string[] = [];
-  for (const dir of ["locale", "locales", "src/locales", "src/locale"]) {
-    const full = path.join(cwd, dir);
-    if (!fs.existsSync(full)) continue;
-    for (const entry of fs.readdirSync(full, {
-      recursive: true,
-    }) as string[]) {
-      if (entry.endsWith(".po")) candidates.push(path.join(full, entry));
-    }
-  }
-  return candidates;
-}
-
-function parsePo(filePath: string): GetTextTranslations | null {
-  try {
-    return po.parse(fs.readFileSync(filePath));
-  } catch {
-    return null;
-  }
-}
-
-/** Extract unique source msgids from discovered .po files (best-effort). */
-function extractSourceStrings(cwd: string): string[] {
-  const candidates = discoverPoFiles(cwd);
-  const strings: string[] = [];
-
-  for (const file of candidates) {
-    const catalog = parsePo(file);
-    if (!catalog) continue;
-    for (const entries of Object.values(catalog.translations)) {
-      for (const [msgid, entry] of Object.entries(entries)) {
-        if (!msgid) continue; // skip header entry
-        strings.push(entry.msgid);
-      }
-    }
-  }
-
-  return [...new Set(strings)];
-}
-
-/**
- * Extract existing source→translation pairs for a specific locale.
- * Used to seed style guide and glossary drafting with attested translations.
- */
-function extractTranslatedPairs(
-  cwd: string,
-  locale: string,
-): TranslationPair[] {
-  const candidates = discoverPoFiles(cwd).filter(
-    (f) => f.includes(`/${locale}/`) || path.basename(f, ".po") === locale,
-  );
-  const pairs: TranslationPair[] = [];
-
-  for (const file of candidates) {
-    const catalog = parsePo(file);
-    if (!catalog) continue;
-    for (const entries of Object.values(catalog.translations)) {
-      for (const [msgid, entry] of Object.entries(entries)) {
-        if (!msgid) continue;
-        const translation = entry.msgstr?.[0];
-        if (translation && translation.trim()) {
-          pairs.push({ source: entry.msgid, translation });
-        }
-      }
-    }
-  }
-
-  return pairs;
 }
 
 // ---------------------------------------------------------------------------
@@ -267,6 +241,8 @@ export const initCommand = defineCommand({
     }
 
     // ── Prompts ──────────────────────────────────────────────────────────────
+
+    const detectedFormat = detectFormatFromFiles(cwd);
 
     const answers = await p.group(
       {
@@ -304,6 +280,28 @@ export const initCommand = defineCommand({
             validate: (v) =>
               (v ?? "").trim() ? undefined : "Model name is required",
           }),
+        format: () =>
+          p.select({
+            message: "Translation library / catalog format",
+            initialValue: detectedFormat,
+            options: [
+              { value: "lingui", label: "Lingui (.po)" },
+              { value: "react-intl", label: "react-intl / FormatJS (.json)" },
+            ],
+          }),
+        catalogPath: ({ results }: { results: Record<string, unknown> }) => {
+          if (results.format !== "react-intl") return undefined;
+          return p.text({
+            message: "Catalog path template (use {locale} placeholder)",
+            placeholder: "lang/{locale}.json",
+            validate: (v) => {
+              if (!(v ?? "").trim()) return "Catalog path is required";
+              if (!(v as string).includes("{locale}"))
+                return "Path must contain {locale}";
+              return undefined;
+            },
+          });
+        },
         draftContext: () =>
           p.confirm({
             message:
@@ -327,12 +325,15 @@ export const initCommand = defineCommand({
     const providerId = answers.providerId as Config["provider"]["id"];
     const model = answers.model as string;
     const sourceLocale = answers.sourceLocale as string;
+    const format = answers.format as Config["format"];
     const draftContext = answers.draftContext as boolean;
+    const catalogPath = answers.catalogPath as string | undefined;
 
     // ── Write i18n.json ──────────────────────────────────────────────────────
 
     const config: Config = {
       version: 1,
+      format,
       locale: { source: sourceLocale, targets: targetLocales },
       provider: { id: providerId, model },
       context: {
@@ -341,6 +342,10 @@ export const initCommand = defineCommand({
         glossary: "i18n/{locale}/glossary.json",
       },
     };
+
+    if (format === "react-intl" && catalogPath) {
+      config.catalogs = [{ path: catalogPath }];
+    }
 
     writeFileSafe(
       path.join(cwd, CONFIG_FILE),
@@ -351,6 +356,20 @@ export const initCommand = defineCommand({
       ) + "\n",
     );
     p.log.success(`Created ${CONFIG_FILE}`);
+
+    // ── Set up adapter ───────────────────────────────────────────────────────
+
+    let adapter;
+    try {
+      adapter = await createAdapter(config, cwd);
+    } catch (err) {
+      p.log.warn(
+        `Could not load catalog adapter (${err instanceof Error ? err.message : String(err)}) — skipping LLM drafting.`,
+      );
+      writeContextStubs(cwd, config, targetLocales);
+      p.outro("Done (stubs created)");
+      return;
+    }
 
     // ── LLM-assisted context drafting ────────────────────────────────────────
 
@@ -374,7 +393,15 @@ export const initCommand = defineCommand({
 
       // Collect context for LLM
       const readme = readFileSafe(path.join(cwd, "README.md"));
-      const sourceStrings = extractSourceStrings(cwd);
+      const allCatalogs = adapter.discoverCatalogs(cwd);
+      const sourceCatalogs = allCatalogs.filter(
+        (f) =>
+          f.includes(`/${sourceLocale}/`) ||
+          path.basename(f, path.extname(f)) === sourceLocale,
+      );
+      const sourceStrings = sourceCatalogs.flatMap((p) =>
+        adapter.extractSourceStrings(p),
+      );
 
       // Draft description
       spinner.start("Drafting project description…");
@@ -399,7 +426,18 @@ export const initCommand = defineCommand({
       for (const locale of targetLocales) {
         spinner.start(`Drafting style guide + glossary for ${locale}…`);
 
-        const translatedPairs = extractTranslatedPairs(cwd, locale);
+        const targetCatalogs = adapter.getCatalogPathsForLocale(locale);
+        const sourcePaths = adapter.getCatalogPathsForLocale(sourceLocale);
+        const translatedPairs: TranslationPair[] = [];
+
+        for (let i = 0; i < targetCatalogs.length; i++) {
+          if (!fs.existsSync(targetCatalogs[i])) continue;
+          const pairs = adapter.extractTranslatedPairs(
+            targetCatalogs[i],
+            sourcePaths[i],
+          );
+          translatedPairs.push(...pairs);
+        }
 
         try {
           const styleGuide = await draftStyleGuide(

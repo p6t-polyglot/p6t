@@ -32,13 +32,19 @@ export const ContextSchema = z.object({
   glossary: z.string().default('i18n/{locale}/glossary.json'),
 })
 
+export const CatalogSchema = z.object({
+  path: z.string(),
+})
+
 export const ConfigSchema = z.object({
   $schema: z.string().optional(),
   version: z.literal(1),
+  format: z.enum(['lingui', 'react-intl']).optional(),
   locale: LocaleSchema,
   provider: ProviderSchema,
   context: ContextSchema.default({}),
   projectId: z.string().optional(),
+  catalogs: z.array(CatalogSchema).optional(),
 })
 
 export type Config = z.infer<typeof ConfigSchema>
@@ -46,3 +52,4 @@ export type ProviderId = z.infer<typeof ProviderIdSchema>
 export type Provider = z.infer<typeof ProviderSchema>
 export type Locale = z.infer<typeof LocaleSchema>
 export type Context = z.infer<typeof ContextSchema>
+export type Catalog = z.infer<typeof CatalogSchema>

@@ -1,4 +1,4 @@
-import type { TranslationUnit, TranslationResult } from '../lingui/catalog.ts'
+import type { TranslationUnit, TranslationResult } from '@p6t/core'
 
 const BLOCK_SEP = '\n---\n'
 
@@ -59,7 +59,9 @@ export function parseResults(raw: string): TranslationResult[] {
           id = idMatch[1].trim()
           continue
         }
-        const translationMatch = /^translation:\s*(.*)$/.exec(line)
+        const translationMatch =
+          /^translation:\s*(.*)$/.exec(line) ??
+          /^target:\s*(.*)$/.exec(line)
         if (translationMatch) {
           translationLines.push(translationMatch[1] ?? '')
           inTranslation = true

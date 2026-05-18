@@ -15,6 +15,25 @@
       "const": 1,
       "description": "Schema version. Must be 1."
     },
+    "format": {
+      "type": "string",
+      "description": "Translation library / catalog format. Auto-detected if omitted.",
+      "enum": ["lingui", "react-intl"]
+    },
+    "catalogs": {
+      "type": "array",
+      "description": "Catalog path templates (required for react-intl; optional for Lingui). Use {locale} as a placeholder.",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path template to catalog files, e.g. 'lang/{locale}.json' or '<rootDir>/locale/{locale}/messages.po'."
+          }
+        }
+      }
+    },
     "locale": {
       "type": "object",
       "description": "Source and target locales for the translation pipeline.",
