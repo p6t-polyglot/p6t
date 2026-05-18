@@ -4,7 +4,7 @@ import { po } from "gettext-parser";
 import type { GetTextTranslations, GetTextTranslation } from "gettext-parser";
 import type { TranslationUnit, TranslationResult } from "@p6t/core";
 import type { CatalogAdapter } from "./adapter.ts";
-import type { Config } from "../config/schema.ts";
+import type { Config } from "@p6t/core";
 import { getConfig } from "@lingui/conf";
 
 // ---------------------------------------------------------------------------

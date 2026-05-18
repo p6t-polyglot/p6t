@@ -4,106 +4,135 @@
   "title": "p6t i18n configuration",
   "description": "Configuration file for the p6t translation pipeline CLI.",
   "type": "object",
-  "required": ["version", "locale", "provider"],
-  "additionalProperties": false,
   "properties": {
     "$schema": {
-      "type": "string",
-      "description": "JSON Schema reference. Set to \"https://p6t.dev/schema/i18n.json\"."
+      "description": "JSON Schema reference. Set to \"https://p6t.dev/schema/i18n.json\".",
+      "type": "string"
     },
     "version": {
+      "type": "number",
       "const": 1,
       "description": "Schema version. Must be 1."
     },
     "format": {
-      "type": "string",
       "description": "Translation library / catalog format. Auto-detected if omitted.",
-      "enum": ["lingui", "react-intl"]
-    },
-    "catalogs": {
-      "type": "array",
-      "description": "Catalog path templates (required for react-intl; optional for Lingui). Use {locale} as a placeholder.",
-      "items": {
-        "type": "object",
-        "required": ["path"],
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "Path template to catalog files, e.g. 'lang/{locale}.json' or '<rootDir>/locale/{locale}/messages.po'."
-          }
-        }
-      }
+      "type": "string",
+      "enum": [
+        "lingui",
+        "react-intl"
+      ]
     },
     "locale": {
       "type": "object",
-      "description": "Source and target locales for the translation pipeline.",
-      "required": ["source", "targets"],
-      "additionalProperties": false,
       "properties": {
         "source": {
           "type": "string",
           "description": "The locale your source strings are written in (e.g. \"en\", \"en-US\")."
         },
         "targets": {
-          "type": "array",
-          "description": "Locales to translate into.",
           "minItems": 1,
+          "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Locales to translate into."
         }
-      }
+      },
+      "required": [
+        "source",
+        "targets"
+      ],
+      "description": "Source and target locales for the translation pipeline.",
+      "additionalProperties": false
     },
     "provider": {
       "type": "object",
-      "description": "LLM provider used for translation. API keys are read from environment variables, never from this file.",
-      "required": ["id", "model"],
-      "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
-          "description": "LLM provider identifier.",
-          "enum": ["openai", "anthropic", "google", "ollama", "openrouter", "mistral"]
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "ollama",
+            "openrouter",
+            "mistral"
+          ],
+          "description": "LLM provider identifier: \"openai\", \"anthropic\", \"google\", \"ollama\", \"openrouter\", \"mistral\""
         },
         "model": {
           "type": "string",
           "description": "Model name to use for translation (e.g. \"gpt-4o\", \"claude-sonnet-4-5\")."
         },
         "prompt": {
-          "type": "string",
-          "description": "Optional system prompt override. Replaces the default p6t prompt entirely."
+          "description": "Optional system prompt override. Replaces the default p6t prompt entirely.",
+          "type": "string"
         },
         "baseUrl": {
-          "type": "string",
-          "description": "Optional API base URL override. Useful for proxies, local Ollama, or custom endpoints."
+          "description": "Optional API base URL override. Useful for proxies, local Ollama, or custom endpoints.",
+          "type": "string"
         }
-      }
+      },
+      "required": [
+        "id",
+        "model"
+      ],
+      "description": "LLM provider used for translation. API keys are read from environment variables, never from this file.",
+      "additionalProperties": false
     },
     "context": {
-      "type": "object",
+      "default": {
+        "description": "i18n/description.md",
+        "styleGuide": "i18n/{locale}/style-guide.md",
+        "glossary": "i18n/{locale}/glossary.json"
+      },
       "description": "Paths to the translation context files sent to the LLM on every call. All paths are relative to the directory containing i18n.json. Use {locale} as a placeholder for the target locale.",
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
         "description": {
-          "type": "string",
+          "default": "i18n/description.md",
           "description": "Path to the project description file (markdown). Shared across all locales. Default: \"i18n/description.md\".",
-          "default": "i18n/description.md"
+          "type": "string"
         },
         "styleGuide": {
-          "type": "string",
+          "default": "i18n/{locale}/style-guide.md",
           "description": "Path template for the per-locale style guide (markdown). {locale} is replaced with the target locale. Default: \"i18n/{locale}/style-guide.md\".",
-          "default": "i18n/{locale}/style-guide.md"
+          "type": "string"
         },
         "glossary": {
-          "type": "string",
+          "default": "i18n/{locale}/glossary.json",
           "description": "Path template for the per-locale glossary (flat JSON object mapping source terms to target translations). {locale} is replaced with the target locale. Default: \"i18n/{locale}/glossary.json\".",
-          "default": "i18n/{locale}/glossary.json"
+          "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "projectId": {
-      "type": "string",
-      "description": "p6t web project identifier. Required for `p6t push` and `p6t pull`. Obtain this from the p6t web app."
+      "description": "p6t web project identifier. Required for `p6t push` and `p6t pull`. Obtain this from the p6t web app.",
+      "type": "string"
+    },
+    "catalogs": {
+      "description": "Catalog path templates (required for react-intl; optional for Lingui). Use {locale} as a placeholder.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path template to catalog files, e.g. 'lang/{locale}.json' or '<rootDir>/locale/{locale}/messages.po'."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
     }
-  }
+  },
+  "required": [
+    "version",
+    "locale",
+    "provider"
+  ],
+  "additionalProperties": false
 }

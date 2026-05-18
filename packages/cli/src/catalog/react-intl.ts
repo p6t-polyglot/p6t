@@ -5,7 +5,7 @@ import type {
   TranslationResult,
 } from "@p6t/core";
 import type { CatalogAdapter } from "./adapter.ts";
-import type { Config } from "../config/schema.ts";
+import type { Config } from "@p6t/core";
 
 // ---------------------------------------------------------------------------
 // react-intl catalog types

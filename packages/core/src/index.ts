@@ -19,3 +19,22 @@ export interface TranslationResult {
   id: string;
   translation: string;
 }
+
+// Re-export config schema and types so all packages share a single source of truth.
+export {
+  ProviderIdSchema,
+  ProviderSchema,
+  LocaleSchema,
+  ContextSchema,
+  CatalogSchema,
+  ConfigSchema,
+} from "./config";
+
+export type {
+  Config,
+  ProviderId,
+  Provider,
+  Locale,
+  Context,
+  Catalog,
+} from "./config";

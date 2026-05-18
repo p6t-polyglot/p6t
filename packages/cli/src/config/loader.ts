@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { ConfigSchema, type Config } from './schema.ts'
+import { ConfigSchema, type Config } from '@p6t/core'
 
 const CONFIG_FILE = 'i18n.json'
 

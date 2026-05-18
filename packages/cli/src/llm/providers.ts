@@ -5,7 +5,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 import { createOllama } from "ai-sdk-ollama";
-import type { Provider } from "../config/schema.ts";
+import type { Provider } from "@p6t/core";
 
 export class ProviderError extends Error {
   constructor(message: string) {

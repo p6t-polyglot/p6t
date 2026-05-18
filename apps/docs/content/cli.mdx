@@ -1,9 +1,9 @@
 # @p6t/cli
 
-The p6t CLI translates missing strings in your Lingui catalogs using an LLM — no p6t account required, no web service in the critical path.
+The p6t CLI translates missing strings in your react-intl catalogs using an LLM — no p6t account required, no web service in the critical path.
 
 ```bash
-lingui extract && p6t translate && lingui compile
+formatjs extract && p6t translate && formatjs compile
 ```
 
 ## Installation
@@ -53,7 +53,7 @@ p6t translate --locale de
 
 **Behaviour:**
 
-- Reads catalog paths from your `lingui.config.*` automatically via `@lingui/conf`
+- Reads catalog paths from your `i18n.json`
 - Only translates strings with an empty or fuzzy `msgstr` — existing translations are never overwritten
 - Sends strings in batches; each batch receives the full context (description, style guide, glossary)
 - Writes results back to the `.po` files and clears the fuzzy flag
@@ -100,6 +100,25 @@ The CLI is designed so that web downtime **never** blocks `p6t translate`. Push 
 | `source` | yes | Locale your source strings are written in (e.g. `en`) |
 | `targets` | yes | Locales to translate into |
 
+### `format` _(coming soon)_
+
+| Value | Description |
+|---|---|
+| `react-intl` | Use react-intl / formatjs catalog format (default in v0.1) |
+| `lingui` | Use Lingui catalog format — support is experimental |
+
+### `catalogs` _(coming soon)_
+
+Array of catalog path templates. Required for `react-intl` when auto-detection fails; will also be used by Lingui support in a future release.
+
+```json
+"catalogs": [
+  { "path": "lang/{locale}.json" }
+]
+```
+
+Use `{locale}` as a placeholder. Paths are relative to the directory containing `i18n.json`.
+
 ### `provider`
 
 | Field | Required | Description |
@@ -127,7 +146,7 @@ Ties this local project to a p6t web project. Required for `push`/`pull` once we
 |---|---|
 | `OPENAI_API_KEY` | Required for `provider.id: "openai"` |
 | `ANTHROPIC_API_KEY` | Required for `provider.id: "anthropic"` |
-| `GOOGLE_AI_API_KEY` or `GEMINI_API_KEY` | Required for `provider.id: "google"` |
+| `GOOGLE_GENERATIVE_AI_API_KEY` or `GOOGLE_API_KEY` | Required for `provider.id: "google"` |
 | `MISTRAL_API_KEY` | Required for `provider.id: "mistral"` |
 | `OPENROUTER_API_KEY` | Required for `provider.id: "openrouter"` |
 | `P6T_API_KEY` | Required for `p6t push` / `p6t pull` (web integration) |

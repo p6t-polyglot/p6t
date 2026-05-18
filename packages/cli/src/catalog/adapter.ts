@@ -4,7 +4,7 @@ import type {
   TranslationUnit,
   TranslationResult,
 } from "@p6t/core";
-import type { Config } from "../config/schema.ts";
+import type { Config } from "@p6t/core";
 
 export type { TranslationUnit, TranslationResult } from "@p6t/core";
 
