@@ -19,8 +19,8 @@ interface ReactIntlSourceEntry {
 
 type ReactIntlSourceCatalog = Record<string, ReactIntlSourceEntry>;
 
-/** Target catalog consumed at runtime (flat key/value). */
-type ReactIntlTargetCatalog = Record<string, string>;
+/** Target catalog written by p6t (default format, same as source minus description). */
+type ReactIntlTargetCatalog = Record<string, { defaultMessage: string }>;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -113,8 +113,8 @@ export function createReactIntlAdapter(
       for (const [id, entry] of Object.entries(sourceCatalog)) {
         const targetValue = targetCatalog[id];
         if (
-          typeof targetValue === "string" &&
-          targetValue.trim() !== ""
+          typeof targetValue?.defaultMessage === "string" &&
+          targetValue.defaultMessage.trim() !== ""
         ) {
           continue;
         }
@@ -126,7 +126,7 @@ export function createReactIntlAdapter(
           unit.source = richEntry.defaultMessage;
           if (richEntry.description) unit.context = richEntry.description;
         } else {
-          unit.source = entry as string;
+          unit.source = entry as unknown as string;
         }
 
         if (unit.source) {
@@ -153,7 +153,7 @@ export function createReactIntlAdapter(
 
       // Merge results into catalog
       for (const [id, translation] of resultMap) {
-        catalog[id] = translation;
+        catalog[id] = { defaultMessage: translation };
       }
 
       // Preserve order from source catalog where possible
@@ -191,7 +191,7 @@ export function createReactIntlAdapter(
         if (isRich) {
           strings.push((entry as ReactIntlSourceEntry).defaultMessage);
         } else {
-          strings.push(entry as string);
+          strings.push(entry as unknown as string);
         }
       }
       return [...new Set(strings)];
@@ -212,15 +212,16 @@ export function createReactIntlAdapter(
       const pairs: Array<{ source: string; translation: string }> = [];
       const isSourceRich = sourceCatalog ? isRichCatalog(sourceCatalog) : false;
 
-      for (const [id, translation] of Object.entries(catalog)) {
-        if (!translation.trim()) continue;
+      for (const [id, entry] of Object.entries(catalog)) {
+        const translation = entry.defaultMessage;
+        if (!translation?.trim()) continue;
         let source = id;
         if (sourceCatalog) {
-          const entry = (sourceCatalog as Record<string, unknown>)[id];
-          if (isSourceRich && entry && typeof entry === "object" && entry !== null) {
-            source = (entry as ReactIntlSourceEntry).defaultMessage;
-          } else if (typeof entry === "string") {
-            source = entry;
+          const sourceEntry = (sourceCatalog as Record<string, unknown>)[id];
+          if (isSourceRich && sourceEntry && typeof sourceEntry === "object" && sourceEntry !== null) {
+            source = (sourceEntry as ReactIntlSourceEntry).defaultMessage;
+          } else if (typeof sourceEntry === "string") {
+            source = sourceEntry;
           }
         }
         pairs.push({ source, translation });
