@@ -88,6 +88,14 @@ pnpm changeset publish  # publish to npm
 
 The release CI workflow runs on every push to `main` and either opens a "Version Packages" PR or publishes (requires `NPM_TOKEN` secret).
 
+### When to suggest a changeset
+
+Once development feels done — the feature works, types pass, the user seems satisfied — proactively ask:
+
+> "Should we add a changeset before wrapping up?"
+
+If framing and shaping happened during the session, the changeset summary must reflect that language: use the problem framing (what the user was trying to do, how they felt) and the shaped solution (the conceptual direction chosen), not just a dry description of the code that was written. The changelog is read by users, not by compilers.
+
 ## CI vs local
 
 | | CI | Local |

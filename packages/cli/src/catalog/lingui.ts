@@ -3,7 +3,12 @@ import path from "node:path";
 import { po } from "gettext-parser";
 import type { GetTextTranslations, GetTextTranslation } from "gettext-parser";
 import type { TranslationUnit, TranslationResult } from "@p6t/config";
-import type { CatalogAdapter } from "./adapter.ts";
+import type {
+  CatalogAdapter,
+  OrphanedTranslation,
+  PendingTranslations,
+  TranslationGroup,
+} from "./adapter.ts";
 import type { Config } from "@p6t/config";
 import { getConfig } from "@lingui/conf";
 
@@ -81,6 +86,12 @@ function discoverPoFiles(cwd: string): string[] {
   return candidates;
 }
 
+/** Extract the file path from a PO reference string (e.g. "src/Cart.tsx:42" -> "src/Cart.tsx"). */
+function refFile(ref: string): string {
+  const idx = ref.lastIndexOf(":");
+  return idx >= 0 ? ref.slice(0, idx) : ref;
+}
+
 // ---------------------------------------------------------------------------
 // Adapter
 // ---------------------------------------------------------------------------
@@ -113,10 +124,10 @@ export function createLinguiAdapter(
   return {
     getCatalogPathsForLocale,
 
-    readUntranslated(
+    readPendingTranslations(
       targetPath: string,
       sourcePath: string,
-    ): TranslationUnit[] {
+    ): PendingTranslations {
       let targetPo: GetTextTranslations | null = null;
       if (fs.existsSync(targetPath)) {
         try {
@@ -126,10 +137,10 @@ export function createLinguiAdapter(
         }
       }
 
-      if (!fs.existsSync(sourcePath)) return [];
+      if (!fs.existsSync(sourcePath)) return { groups: [] };
       const sourcePo = po.parse(fs.readFileSync(sourcePath));
 
-      const units: TranslationUnit[] = [];
+      const unitsByFile = new Map<string, TranslationUnit[]>();
 
       for (const [ctx, entries] of Object.entries(sourcePo.translations)) {
         for (const [msgid, entry] of Object.entries(entries)) {
@@ -160,13 +171,31 @@ export function createLinguiAdapter(
           if (extracted) unit.context = extracted;
 
           const refs = entry.comments?.reference;
-          if (refs) unit.references = refs.split("\n").filter(Boolean);
+          if (refs) {
+            unit.references = refs.split("\n").filter(Boolean);
+          }
 
-          units.push(unit);
+          const file = unit.references?.[0] ? refFile(unit.references[0]) : sourcePath;
+          const group = unitsByFile.get(file);
+          if (group) {
+            group.push(unit);
+          } else {
+            unitsByFile.set(file, [unit]);
+          }
         }
       }
 
-      return units;
+      const hasReferences = unitsByFile.size > 0 &&
+        Array.from(unitsByFile.values()).some((units) =>
+          units.some((u) => u.references != null && u.references.length > 0),
+        );
+
+      const groups: TranslationGroup[] = [];
+      for (const [sourceFile, units] of unitsByFile) {
+        groups.push({ sourceFile, hasSourceRefs: hasReferences, units });
+      }
+
+      return { groups };
     },
 
     writeTranslations(
@@ -207,6 +236,48 @@ export function createLinguiAdapter(
 
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, po.compile(catalog));
+    },
+
+    removeStaleKeys(
+      filePath: string,
+      sourceFilePath: string,
+    ): OrphanedTranslation[] {
+      if (!fs.existsSync(filePath) || !fs.existsSync(sourceFilePath)) {
+        return [];
+      }
+
+      const catalog = po.parse(fs.readFileSync(filePath));
+      const source = po.parse(fs.readFileSync(sourceFilePath));
+
+      const orphans: OrphanedTranslation[] = [];
+      let modified = false;
+
+      for (const ctx of Object.keys(catalog.translations)) {
+        for (const msgid of Object.keys(catalog.translations[ctx])) {
+          if (!msgid) continue;
+          if (!source.translations[ctx]?.[msgid]) {
+            const entry = catalog.translations[ctx][msgid];
+            orphans.push({
+              id: makeId(ctx || undefined, msgid),
+              source: entry.msgid,
+              translation: entry.msgstr?.[0] ?? "",
+              context: entry.comments?.extracted,
+            });
+            delete catalog.translations[ctx][msgid];
+            modified = true;
+          }
+        }
+        // Clean up empty contexts
+        if (Object.keys(catalog.translations[ctx]).length === 0) {
+          delete catalog.translations[ctx];
+        }
+      }
+
+      if (modified) {
+        fs.writeFileSync(filePath, po.compile(catalog));
+      }
+
+      return orphans;
     },
 
     discoverCatalogs(cwd: string): string[] {

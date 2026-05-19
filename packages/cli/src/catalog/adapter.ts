@@ -8,13 +8,42 @@ import type { Config } from "@p6t/config";
 
 export type { TranslationUnit, TranslationResult } from "@p6t/config";
 
+/** A group of translation units that share the same source-file context. */
+export interface TranslationGroup {
+  /** Source file path, or the catalog path when no refs are available. */
+  sourceFile: string;
+  /** Whether the sourceFile came from actual source-code references. */
+  hasSourceRefs: boolean;
+  units: TranslationUnit[];
+}
+
+/** A previously translated key that no longer exists in the source catalog. */
+export interface OrphanedTranslation {
+  id: string;
+  /** The source text at the time the translation was written. */
+  source: string | undefined;
+  /** The translated text that was stored in the target catalog. */
+  translation: string;
+  /** Context / description at the time the translation was written. */
+  context: string | undefined;
+}
+
+/** Untranslated work remaining after stale-key removal. */
+export interface PendingTranslations {
+  /** Untranslated units grouped by shared source-file context. */
+  groups: TranslationGroup[];
+}
+
 /** Format-agnostic seam for reading and writing translation catalogs. */
 export interface CatalogAdapter {
   /** Resolve absolute catalog file paths for a locale. */
   getCatalogPathsForLocale(locale: string): string[];
 
-  /** Read a target catalog against its source and return units needing translation. */
-  readUntranslated(targetPath: string, sourcePath: string): TranslationUnit[];
+  /**
+   * Read a target catalog against its source and return untranslated units,
+   * grouped by source-file context.
+   */
+  readPendingTranslations(targetPath: string, sourcePath: string): PendingTranslations;
 
   /** Write translation results back into the target catalog. */
   writeTranslations(
@@ -22,6 +51,15 @@ export interface CatalogAdapter {
     sourcePath: string,
     results: TranslationResult[],
   ): void;
+
+  /**
+   * Remove keys from the target catalog that no longer exist in the source.
+   * Returns rich metadata about the removed translations (orphans).
+   */
+  removeStaleKeys(
+    targetPath: string,
+    sourcePath: string,
+  ): OrphanedTranslation[];
 
   /** Discover existing catalog files under cwd (for init/context seeding). */
   discoverCatalogs(cwd: string): string[];

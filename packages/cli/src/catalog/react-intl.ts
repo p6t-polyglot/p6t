@@ -4,7 +4,12 @@ import type {
   TranslationUnit,
   TranslationResult,
 } from "@p6t/config";
-import type { CatalogAdapter } from "./adapter.ts";
+import type {
+  CatalogAdapter,
+  OrphanedTranslation,
+  PendingTranslations,
+  TranslationGroup,
+} from "./adapter.ts";
 import type { Config } from "@p6t/config";
 
 // ---------------------------------------------------------------------------
@@ -15,12 +20,23 @@ import type { Config } from "@p6t/config";
 interface ReactIntlSourceEntry {
   defaultMessage: string;
   description?: string;
+  file?: string;
+  line?: number;
+  col?: number;
+  start?: number;
+  end?: number;
 }
 
 type ReactIntlSourceCatalog = Record<string, ReactIntlSourceEntry>;
 
 /** Target catalog written by p6t (default format, same as source minus description). */
-type ReactIntlTargetCatalog = Record<string, { defaultMessage: string }>;
+type ReactIntlTargetEntry = {
+  defaultMessage: string;
+  _p6t_source?: string;
+  _p6t_description?: string;
+};
+
+type ReactIntlTargetCatalog = Record<string, ReactIntlTargetEntry>;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -101,14 +117,17 @@ export function createReactIntlAdapter(
   return {
     getCatalogPathsForLocale,
 
-    readUntranslated(targetPath: string, sourcePath: string): TranslationUnit[] {
-      const sourceCatalog = readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(sourcePath);
-      if (!sourceCatalog) return [];
+    readPendingTranslations(targetPath: string, sourcePath: string): PendingTranslations {
+      const sourceCatalog =
+        readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(sourcePath);
+      if (!sourceCatalog) return { groups: [] };
 
-      const targetCatalog = readJsonSafe<ReactIntlTargetCatalog>(targetPath) ?? {};
-
-      const units: TranslationUnit[] = [];
+      const targetCatalog =
+        readJsonSafe<ReactIntlTargetCatalog>(targetPath) ?? {};
       const isRich = isRichCatalog(sourceCatalog);
+
+      const unitsByFile = new Map<string, TranslationUnit[]>();
+      let hasReferences = false;
 
       for (const [id, entry] of Object.entries(sourceCatalog)) {
         const targetValue = targetCatalog[id];
@@ -125,16 +144,39 @@ export function createReactIntlAdapter(
           const richEntry = entry as ReactIntlSourceEntry;
           unit.source = richEntry.defaultMessage;
           if (richEntry.description) unit.context = richEntry.description;
+          if (richEntry.file != null && richEntry.line != null) {
+            unit.references = [`${richEntry.file}:${richEntry.line}`];
+            hasReferences = true;
+          }
         } else {
           unit.source = entry as unknown as string;
         }
 
-        if (unit.source) {
-          units.push(unit);
+        if (!unit.source) continue;
+
+        const file = unit.references?.[0]?.split(":")[0] ?? sourcePath;
+        const group = unitsByFile.get(file);
+        if (group) {
+          group.push(unit);
+        } else {
+          unitsByFile.set(file, [unit]);
         }
       }
 
-      return units;
+      if (!hasReferences && unitsByFile.size > 0) {
+        console.warn(
+          "[p6t] Source file references not found in react-intl catalog. " +
+            "Translations will be grouped by catalog file instead of by component. " +
+            'For better results, run `formatjs extract` with `--extract-source-location`.',
+        );
+      }
+
+      const groups: TranslationGroup[] = [];
+      for (const [sourceFile, units] of unitsByFile) {
+        groups.push({ sourceFile, hasSourceRefs: hasReferences, units });
+      }
+
+      return { groups };
     },
 
     writeTranslations(
@@ -142,7 +184,15 @@ export function createReactIntlAdapter(
       sourcePath: string,
       results: TranslationResult[],
     ): void {
-      const resultMap = new Map(results.map((r) => [r.id, r.translation]));
+      const sourceCatalog =
+        readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(
+          sourcePath,
+        );
+      const isRich = sourceCatalog ? isRichCatalog(sourceCatalog) : false;
+
+      const sourceMap = sourceCatalog
+        ? new Map(Object.entries(sourceCatalog))
+        : new Map<string, unknown>();
 
       let catalog: ReactIntlTargetCatalog;
       if (fs.existsSync(targetPath)) {
@@ -151,13 +201,25 @@ export function createReactIntlAdapter(
         catalog = {};
       }
 
-      // Merge results into catalog
-      for (const [id, translation] of resultMap) {
-        catalog[id] = { defaultMessage: translation };
+      // Merge results into catalog, preserving _p6t_* metadata from previous writes
+      for (const result of results) {
+        const sourceEntry = sourceMap.get(result.id);
+        const entry: ReactIntlTargetEntry = {
+          defaultMessage: result.translation,
+        };
+
+        if (isRich && sourceEntry && typeof sourceEntry === "object") {
+          const rich = sourceEntry as ReactIntlSourceEntry;
+          if (rich.description) entry._p6t_description = rich.description;
+          entry._p6t_source = rich.defaultMessage;
+        } else if (typeof sourceEntry === "string") {
+          entry._p6t_source = sourceEntry;
+        }
+
+        catalog[result.id] = entry;
       }
 
       // Preserve order from source catalog where possible
-      const sourceCatalog = readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(sourcePath);
       const ordered: ReactIntlTargetCatalog = {};
       if (sourceCatalog) {
         for (const id of Object.keys(sourceCatalog)) {
@@ -167,9 +229,9 @@ export function createReactIntlAdapter(
         }
       }
       // Append any keys not in source (shouldn't happen, but be safe)
-      for (const [id, translation] of Object.entries(catalog)) {
+      for (const [id, entry] of Object.entries(catalog)) {
         if (!(id in ordered)) {
-          ordered[id] = translation;
+          ordered[id] = entry;
         }
       }
 
@@ -177,12 +239,51 @@ export function createReactIntlAdapter(
       fs.writeFileSync(targetPath, JSON.stringify(ordered, null, 2) + "\n");
     },
 
+    removeStaleKeys(
+      targetPath: string,
+      sourcePath: string,
+    ): OrphanedTranslation[] {
+      if (!fs.existsSync(targetPath)) return [];
+
+      const catalog = readJsonSafe<ReactIntlTargetCatalog>(targetPath) ?? {};
+      const sourceCatalog =
+        readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(
+          sourcePath,
+        );
+      if (!sourceCatalog) return [];
+
+      const orphans: OrphanedTranslation[] = [];
+      let modified = false;
+
+      for (const id of Object.keys(catalog)) {
+        if (!(id in sourceCatalog)) {
+          const entry = catalog[id];
+          orphans.push({
+            id,
+            source: entry._p6t_source,
+            translation: entry.defaultMessage,
+            context: entry._p6t_description,
+          });
+          delete catalog[id];
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+        fs.writeFileSync(targetPath, JSON.stringify(catalog, null, 2) + "\n");
+      }
+
+      return orphans;
+    },
+
     discoverCatalogs(cwd: string): string[] {
       return discoverJsonFiles(cwd);
     },
 
     extractSourceStrings(filePath: string): string[] {
-      const catalog = readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(filePath);
+      const catalog =
+        readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(filePath);
       if (!catalog) return [];
       const isRich = isRichCatalog(catalog);
       const strings: string[] = [];
@@ -204,9 +305,13 @@ export function createReactIntlAdapter(
       const catalog = readJsonSafe<ReactIntlTargetCatalog>(filePath);
       if (!catalog) return [];
 
-      let sourceCatalog: ReactIntlSourceCatalog | ReactIntlTargetCatalog | null = null;
+      let sourceCatalog: ReactIntlSourceCatalog | ReactIntlTargetCatalog | null =
+        null;
       if (sourceFilePath) {
-        sourceCatalog = readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(sourceFilePath);
+        sourceCatalog =
+          readJsonSafe<ReactIntlSourceCatalog | ReactIntlTargetCatalog>(
+            sourceFilePath,
+          );
       }
 
       const pairs: Array<{ source: string; translation: string }> = [];
@@ -218,7 +323,12 @@ export function createReactIntlAdapter(
         let source = id;
         if (sourceCatalog) {
           const sourceEntry = (sourceCatalog as Record<string, unknown>)[id];
-          if (isSourceRich && sourceEntry && typeof sourceEntry === "object" && sourceEntry !== null) {
+          if (
+            isSourceRich &&
+            sourceEntry &&
+            typeof sourceEntry === "object" &&
+            sourceEntry !== null
+          ) {
             source = (sourceEntry as ReactIntlSourceEntry).defaultMessage;
           } else if (typeof sourceEntry === "string") {
             source = sourceEntry;

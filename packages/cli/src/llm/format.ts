@@ -1,17 +1,10 @@
 import type { TranslationUnit, TranslationResult } from '@p6t/config'
+import type { OrphanedTranslation } from '../catalog/adapter.ts'
 
 const BLOCK_SEP = '\n---\n'
 
 /**
  * Serialise a batch of translation units into the compact prompt format.
- *
- * Example output block:
- *   ---
- *   id: cart_item_count
- *   source: You have {count, plural, one {# item} other {# items}}
- *   context: Cart summary line shown at the top of the checkout page
- *   ref: src/Cart.tsx:42
- *   ---
  */
 export function serialiseUnits(units: TranslationUnit[]): string {
   const blocks = units.map((unit) => {
@@ -21,6 +14,27 @@ export function serialiseUnits(units: TranslationUnit[]): string {
     if (unit.references?.length) {
       lines.push(`ref: ${unit.references.join(', ')}`)
     }
+    return lines.join('\n')
+  })
+  return '---\n' + blocks.join(BLOCK_SEP) + '\n---'
+}
+
+/**
+ * Serialise orphaned translations for the system prompt style-reference section.
+ *
+ * Example output:
+ *   ---
+ *   id: old.checkout.label
+ *   source: Submit order
+ *   translation: Bestellung abschicken
+ *   ---
+ */
+export function serialiseOrphans(orphans: OrphanedTranslation[]): string {
+  const blocks = orphans.map((o) => {
+    const lines: string[] = [`id: ${o.id}`]
+    if (o.source) lines.push(`source: ${o.source}`)
+    lines.push(`translation: ${o.translation}`)
+    if (o.context) lines.push(`context: ${o.context}`)
     return lines.join('\n')
   })
   return '---\n' + blocks.join(BLOCK_SEP) + '\n---'

@@ -2,12 +2,13 @@ import { generateText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { TranslationContext } from '../context/loader.ts'
 import { formatGlossary } from '../context/loader.ts'
-import type { TranslationUnit, TranslationResult } from '@p6t/config'
-import { serialiseUnits, parseResults } from './format.ts'
+import type { TranslationResult } from '@p6t/config'
+import type { TranslationGroup, OrphanedTranslation } from '../catalog/adapter.ts'
+import { serialiseUnits, serialiseOrphans, parseResults } from './format.ts'
 
 export interface TranslationBatch {
   results: TranslationResult[]
-  missing: TranslationUnit[]
+  missing: { id: string; source: string }[]
   /** Raw LLM response text for the last batch (useful for debugging). */
   rawResponse: string | undefined
 }
@@ -15,7 +16,8 @@ export interface TranslationBatch {
 /** The seam for future experimentation — swap implementations freely. */
 export interface Translator {
   translate(
-    units: TranslationUnit[],
+    group: TranslationGroup,
+    orphans: OrphanedTranslation[],
     sourceLocale: string,
     targetLocale: string,
     ctx: TranslationContext,
@@ -23,11 +25,13 @@ export interface Translator {
 }
 
 const DEFAULT_BATCH_SIZE = 200
+const DEFAULT_MAX_ORPHANS = 50
 
 function buildSystemPrompt(
   sourceLocale: string,
   targetLocale: string,
   ctx: TranslationContext,
+  orphans: OrphanedTranslation[],
   customPrompt?: string,
 ): string {
   const sections: string[] = []
@@ -55,6 +59,16 @@ function buildSystemPrompt(
     )
   }
 
+  if (orphans.length > 0) {
+    sections.push(
+      [
+        '## Previously translated strings (style reference)',
+        'These keys were removed or renamed from the source. Use them to maintain consistent tone and terminology:',
+        serialiseOrphans(orphans),
+      ].join('\n\n'),
+    )
+  }
+
   sections.push(
     [
       '## Instructions',
@@ -77,13 +91,18 @@ function buildSystemPrompt(
 }
 
 function buildUserPrompt(
-  units: TranslationUnit[],
+  group: TranslationGroup,
   sourceLocale: string,
   targetLocale: string,
 ): string {
+  const contextLine = group.hasSourceRefs
+    ? `These strings all appear in: ${group.sourceFile}\n\n`
+    : ''
+
   return (
     `Translate the following strings from ${sourceLocale} to ${targetLocale}:\n\n` +
-    serialiseUnits(units)
+    contextLine +
+    serialiseUnits(group.units)
   )
 }
 
@@ -93,30 +112,38 @@ export class DefaultTranslator implements Translator {
     private readonly model: LanguageModel,
     private readonly customPrompt?: string,
     private readonly batchSize = DEFAULT_BATCH_SIZE,
+    private readonly maxOrphans = DEFAULT_MAX_ORPHANS,
   ) {}
 
   async translate(
-    units: TranslationUnit[],
+    group: TranslationGroup,
+    orphans: OrphanedTranslation[],
     sourceLocale: string,
     targetLocale: string,
     ctx: TranslationContext,
   ): Promise<TranslationBatch> {
-    if (units.length === 0) return { results: [], missing: [], rawResponse: undefined }
+    if (group.units.length === 0) {
+      return { results: [], missing: [], rawResponse: undefined }
+    }
+
+    const trimmedOrphans = orphans.slice(0, this.maxOrphans)
 
     const systemPrompt = buildSystemPrompt(
       sourceLocale,
       targetLocale,
       ctx,
+      trimmedOrphans,
       this.customPrompt,
     )
     const results: TranslationResult[] = []
-    const missing: TranslationUnit[] = []
+    const missing: { id: string; source: string }[] = []
     let lastRawResponse: string | undefined
 
-    // Process in batches
-    for (let i = 0; i < units.length; i += this.batchSize) {
-      const batch = units.slice(i, i + this.batchSize)
-      const userPrompt = buildUserPrompt(batch, sourceLocale, targetLocale)
+    // Process in batches within the group
+    for (let i = 0; i < group.units.length; i += this.batchSize) {
+      const batchUnits = group.units.slice(i, i + this.batchSize)
+      const batchGroup: TranslationGroup = { ...group, units: batchUnits }
+      const userPrompt = buildUserPrompt(batchGroup, sourceLocale, targetLocale)
 
       const { text } = await generateText({
         model: this.model,
@@ -128,9 +155,9 @@ export class DefaultTranslator implements Translator {
       const batchResults = parseResults(text)
       const returned = new Set(batchResults.map((r) => r.id))
 
-      for (const unit of batch) {
+      for (const unit of batchUnits) {
         if (!returned.has(unit.id)) {
-          missing.push(unit)
+          missing.push({ id: unit.id, source: unit.source })
         }
       }
 
