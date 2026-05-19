@@ -1,4 +1,4 @@
-// @p6t/core — framework-agnostic translation engine
+// @p6t/config — configuration schema and shared types for p6t
 
 /** A single string that needs translation. */
 export interface TranslationUnit {

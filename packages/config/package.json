@@ -1,7 +1,7 @@
 {
-  "name": "@p6t/core",
+  "name": "@p6t/config",
   "version": "0.0.0",
-  "description": "Framework-agnostic translation engine for p6t",
+  "description": "Configuration schema and shared types for p6t",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -27,7 +27,6 @@
   "keywords": [
     "i18n",
     "translation",
-    "fbtee",
     "polyglot"
   ],
   "author": "",
