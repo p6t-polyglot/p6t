@@ -3,10 +3,10 @@ import path from "node:path";
 import type {
   TranslationUnit,
   TranslationResult,
-} from "@p6t/core";
-import type { Config } from "@p6t/core";
+} from "@p6t/config";
+import type { Config } from "@p6t/config";
 
-export type { TranslationUnit, TranslationResult } from "@p6t/core";
+export type { TranslationUnit, TranslationResult } from "@p6t/config";
 
 /** Format-agnostic seam for reading and writing translation catalogs. */
 export interface CatalogAdapter {

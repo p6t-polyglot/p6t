@@ -19,7 +19,6 @@
   "keywords": [
     "i18n",
     "translation",
-    "fbtee",
     "cli",
     "polyglot"
   ],
@@ -36,7 +35,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.72",
-    "@p6t/core": "workspace:*",
+    "@p6t/config": "workspace:*",
     "@ai-sdk/google": "^3.0.65",
     "@ai-sdk/mistral": "^3.0.31",
     "@ai-sdk/openai": "^3.0.54",

@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import { resolveContextPath } from '../config/loader.ts'
-import type { Config } from '@p6t/core'
+import type { Config } from '@p6t/config'
 
 export interface TranslationContext {
   /** Contents of description.md, or undefined if file doesn't exist. */

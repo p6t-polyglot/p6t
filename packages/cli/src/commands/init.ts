@@ -5,7 +5,7 @@ import { defineCommand } from "citty";
 import { generateText } from "ai";
 import { createModel, ProviderError } from "../llm/providers.ts";
 import { createAdapter } from "../catalog/adapter.ts";
-import type { Config } from "@p6t/core";
+import type { Config } from "@p6t/config";
 
 const CONFIG_FILE = "i18n.json";
 

@@ -3,9 +3,9 @@ import path from "node:path";
 import type {
   TranslationUnit,
   TranslationResult,
-} from "@p6t/core";
+} from "@p6t/config";
 import type { CatalogAdapter } from "./adapter.ts";
-import type { Config } from "@p6t/core";
+import type { Config } from "@p6t/config";
 
 // ---------------------------------------------------------------------------
 // react-intl catalog types

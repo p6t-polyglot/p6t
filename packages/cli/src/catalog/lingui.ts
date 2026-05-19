@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { po } from "gettext-parser";
 import type { GetTextTranslations, GetTextTranslation } from "gettext-parser";
-import type { TranslationUnit, TranslationResult } from "@p6t/core";
+import type { TranslationUnit, TranslationResult } from "@p6t/config";
 import type { CatalogAdapter } from "./adapter.ts";
-import type { Config } from "@p6t/core";
+import type { Config } from "@p6t/config";
 import { getConfig } from "@lingui/conf";
 
 // ---------------------------------------------------------------------------

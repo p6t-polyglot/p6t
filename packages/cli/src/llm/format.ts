@@ -1,4 +1,4 @@
-import type { TranslationUnit, TranslationResult } from '@p6t/core'
+import type { TranslationUnit, TranslationResult } from '@p6t/config'
 
 const BLOCK_SEP = '\n---\n'
 

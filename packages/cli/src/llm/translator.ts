@@ -2,7 +2,7 @@ import { generateText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { TranslationContext } from '../context/loader.ts'
 import { formatGlossary } from '../context/loader.ts'
-import type { TranslationUnit, TranslationResult } from '@p6t/core'
+import type { TranslationUnit, TranslationResult } from '@p6t/config'
 import { serialiseUnits, parseResults } from './format.ts'
 
 export interface TranslationBatch {
