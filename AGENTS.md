@@ -29,7 +29,7 @@ Workspace deps use `workspace:*` (always resolves to local version).
 pnpm build        # turbo run build — required before typecheck or test
 pnpm dev          # turbo run dev (docs on :3001)
 pnpm typecheck    # turbo run typecheck (tsc --noEmit everywhere)
-pnpm lint         # turbo run lint — currently identical to typecheck in packages; docs uses next lint
+pnpm lint         # turbo run lint — tsc --noEmit in packages; eslint . in apps/docs
 pnpm test         # turbo run test — no tests exist yet
 pnpm clean        # turbo run clean && rm -rf node_modules
 ```
@@ -57,6 +57,20 @@ Root `tsconfig.json` enables `strict`, `noUnusedLocals`, `noUnusedParameters`, `
 
 ### No formatter
 No Prettier, Biome, or ESLint auto-format is configured. Do not assume auto-formatting on save or in CI.
+
+### `apps/docs` — Next.js 16
+
+`apps/docs` runs **Next.js 16** (`next@^16.2.6`). This is a breaking version — APIs, conventions, and file structure differ significantly from Next.js 14/15 and from most training data. Before writing any Next.js code for this app:
+
+1. Read the relevant guide from `node_modules/next/dist/docs/` (already installed locally).
+2. Key entry points:
+   - Upgrade notes: `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md`
+   - App Router API reference: `node_modules/next/dist/docs/01-app/03-api-reference/`
+   - Guides: `node_modules/next/dist/docs/01-app/02-guides/`
+3. Heed deprecation notices. Notable v16 changes that affect this repo:
+   - `next lint` removed → ESLint CLI used directly (`eslint .`)
+   - Turbopack is now the default for `next dev` and `next build`
+   - Async Request APIs (`cookies`, `headers`, `params`, `searchParams`) — sync access fully removed
 
 ## Communication
 
