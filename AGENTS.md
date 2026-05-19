@@ -2,7 +2,7 @@
 
 ## Project
 
-p6t is an early-stage auto-translation platform. It supports both [fbtee](https://github.com/nkzw-tech/fbtee) and [Lingui](https://lingui.dev/) as translation libraries. Packages are published; the web app is private.
+p6t is an early-stage AI-powered auto-translation CLI for React apps. It supports **react-intl** (default) and **Lingui** (experimental). Published packages are `@p6t/cli` and `@p6t/config`.
 
 ## Package manager
 
@@ -17,11 +17,8 @@ pnpm install --frozen-lockfile # CI / reproducible
 
 | Path | Package | Published |
 |---|---|---|
-| `packages/core` | `@p6t/core` | yes |
-| `packages/lingui` | `@p6t/lingui` | yes |
-| `packages/fbtee` | `@p6t/fbtee` | yes |
+| `packages/config` | `@p6t/config` | yes |
 | `packages/cli` | `@p6t/cli` | yes |
-| `apps/web` | (web) | no — ignored by Changesets |
 | `apps/docs` | `@p6t/docs` | no |
 
 Workspace deps use `workspace:*` (always resolves to local version).
@@ -30,7 +27,7 @@ Workspace deps use `workspace:*` (always resolves to local version).
 
 ```bash
 pnpm build        # turbo run build — required before typecheck or test
-pnpm dev          # turbo run dev (web on :3000, docs on :3001)
+pnpm dev          # turbo run dev (docs on :3001)
 pnpm typecheck    # turbo run typecheck (tsc --noEmit everywhere)
 pnpm lint         # turbo run lint — currently identical to typecheck in packages; docs uses next lint
 pnpm test         # turbo run test — no tests exist yet
@@ -46,25 +43,14 @@ Turborepo's `"dependsOn": ["^build"]` means `typecheck` and `test` trigger upstr
 
 ## Toolchain quirks
 
-### fbtee / Babel in `apps/web`
-- `apps/web/babel.config.js` **intentionally disables Next.js SWC** and activates `@nkzw/babel-preset-fbtee`. Do not remove or replace this file.
-- String collection runs at the web app level only:
-  ```bash
-  pnpm --filter web fbtee:collect   # extract source strings
-  pnpm --filter web fbtee:translate # compile translations
-  ```
-
 ### CLI build requires Bun
 - Production CLI binary: `bun build --compile src/index.ts --outfile dist/p6t` (self-contained, no Node runtime).
 - Dev build uses `tsup` (`pnpm --filter @p6t/cli build:dev`).
 - **Bun is a compile-time tool only** — not the dev runtime. Node 22 is the dev runtime.
 - CI does **not** install Bun yet — `pnpm build` for `@p6t/cli` will fail in CI until a `setup-bun` step is added.
 
-### `packages/core` must stay fbtee-free
-Architectural constraint: `@p6t/core` has zero fbtee dependency to remain runtime-agnostic for future native targets (React Native, Swift, Kotlin). Do not add fbtee imports there.
-
-### `<fbt>` JSX vs `fbt()` function
-Use `<fbt>` JSX only in JSX contexts. In the CLI, Node scripts, or non-JSX code, use the `fbt()` function form.
+### `packages/config` scope
+`@p6t/config` contains the `i18n.json` config schema and shared types (`TranslationUnit`, `TranslationResult`). It has no React or i18n library dependency.
 
 ### TypeScript strictness
 Root `tsconfig.json` enables `strict`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, `exactOptionalPropertyTypes`, `moduleResolution: "bundler"`. Violations will fail typecheck.
@@ -100,7 +86,7 @@ pnpm changeset version  # bump versions + update CHANGELOGs
 pnpm changeset publish  # publish to npm
 ```
 
-The release CI workflow runs on every push to `main` and either opens a "Version Packages" PR or publishes (requires `NPM_TOKEN` secret). `apps/web` is excluded from versioning.
+The release CI workflow runs on every push to `main` and either opens a "Version Packages" PR or publishes (requires `NPM_TOKEN` secret).
 
 ## CI vs local
 
@@ -111,3 +97,6 @@ The release CI workflow runs on every push to `main` and either opens a "Version
 | Bun | **not installed** | must be installed for CLI build |
 | Lint | not run | `pnpm lint` |
 | Steps | build → typecheck → test | run individually |
+
+Skills provide specialized instructions and workflows for specific tasks.
+Use the skill tool to load a skill when a task matches its description.

@@ -10,17 +10,16 @@ import { Callout, Tabs, } from "nextra/components";
   }
 </div>
 
-p6t (polyglot) automates the localization (l10n) workflow, so that your CD pipeline stays continuous. Wrap your strings in `<fbt>` components and ship every feature in every language—automatically.
+p6t (polyglot) automates the localization (l10n) workflow so your CD pipeline stays continuous. Translate every new string automatically — using your own LLM API key, with no external service required.
 
 ```diff
- function WelcomeHeading({ user }) {
-   return (
--    <fbt desc="welcome heading">Welcome back.</fbt>
-+    <fbt desc="welcome heading">
-+      Welcome back, <fbt:param name="name">{user.name}</fbt:param>!
-+    </fbt>
-   );
- }
+ // react-intl
+ intl.formatMessage({
+-  defaultMessage: 'Welcome back.',
++  defaultMessage: 'Welcome back, {name}!',
+   description: 'Dashboard heading shown after login.',
+-})
++}, { name: user.name })
 ```
 
 ```bash
@@ -38,15 +37,13 @@ $ p6t translate
   </Tabs>
 </div>
 
-
-Built on [fbtee](https://github.com/nkzw-tech/fbtee), the open-source successor to Facebook's fbt with over a decade of production support for billions of users.
+Works with **react-intl** (default) and **Lingui** (experimental). Bring your own LLM — OpenAI, Anthropic, Google, Mistral, Ollama, and OpenRouter are supported out of the box.
 
 <Callout emoji="⚡">
   No translation phase. No release blocking. No orphaned strings.
 </Callout>
 
 <div className="mt-16 mb-20 text-center">
-  [Get Started](/getting-started) · [GitHub](https://github.com/p6t/p6t) ·
+  [React Intl](/getting-started-react-intl) · [Lingui](/getting-started-lingui) · [CLI Reference](/cli) · [GitHub](https://github.com/p6t/p6t) ·
   [npm](https://www.npmjs.com/org/p6t)
 </div>
-

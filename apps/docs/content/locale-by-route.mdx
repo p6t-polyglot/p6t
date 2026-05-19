@@ -1,0 +1,83 @@
+# Locale by route type
+
+Not every page in your app should get its locale the same way. A well-structured Next.js App Router project has three distinct contexts, each with a natural locale source.
+
+| Route type | Locale source | URL shape |
+|---|---|---|
+| Public pages | URL segment | `/en/about` |
+| Private pages | User profile (auth fetch you're already doing) | `/dashboard` |
+| Sign-in / sign-up | Cookie set by the last page visited | `/login` |
+
+## Public pages (`app/[locale]/...`)
+
+Public pages need SEO, so the locale belongs in the URL. The layout reads the segment directly:
+
+```tsx
+// app/[locale]/layout.tsx
+import { getMessages, type Locale } from '@/lib/i18n'
+import Providers from './providers'
+
+export default async function PublicLayout({ children, params }) {
+  const { locale } = await params
+  const messages = await getMessages(locale)
+
+  return (
+    <html lang={locale}>
+      <body>
+        <Providers locale={locale} messages={messages}>
+          {children}
+        </Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+If you use a proxy to redirect new visitors to the right locale segment, scope its matcher to public routes only — private and auth routes should never be redirected.
+
+## Private pages (`app/(private)/...`)
+
+No `[locale]` segment. The private layout already fetches the session server-side for auth — the user's preferred locale comes along for free from that same call:
+
+```tsx
+// app/(private)/layout.tsx
+import { getMessages } from '@/lib/i18n'
+import Providers from '@/app/[locale]/providers'
+
+export default async function PrivateLayout({ children }) {
+  const user = await getSession()   // already needed for auth
+  const messages = await getMessages(user.locale)
+
+  return (
+    <Providers locale={user.locale} messages={messages}>
+      {children}
+    </Providers>
+  )
+}
+```
+
+No duplicate fetch, no locale in the URL.
+
+## Sign-in / sign-up pages
+
+The genuine edge case: the user is unauthenticated (no profile fetch) and you don't want a locale segment in the URL either. Read a locale cookie set the last time the user changed their language preference — on any public or private page:
+
+```tsx
+// app/(auth)/layout.tsx
+import { cookies } from 'next/headers'
+import { defaultLocale, getMessages, type Locale } from '@/lib/i18n'
+import Providers from '@/app/[locale]/providers'
+
+export default async function AuthLayout({ children }) {
+  const locale = (cookies().get('p6t-locale')?.value ?? defaultLocale) as Locale
+  const messages = await getMessages(locale)
+
+  return (
+    <Providers locale={locale} messages={messages}>
+      {children}
+    </Providers>
+  )
+}
+```
+
+Write the cookie whenever the user selects a language. Because this happens on both public and private pages, the sign-in page will always reflect the locale they were just using.
