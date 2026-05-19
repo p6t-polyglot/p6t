@@ -64,7 +64,7 @@ export async function createAdapter(
     case "react-intl": {
       if (!config.catalogs || config.catalogs.length === 0) {
         throw new Error(
-          'react-intl requires catalogs in i18n.json, e.g. [{ "path": "lang/{locale}.json" }]',
+          'react-intl requires catalogs in i18n.json, e.g. [{ "path": "i18n/{locale}.json" }]',
         );
       }
       const { createReactIntlAdapter } = await import("./react-intl.ts");

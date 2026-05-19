@@ -293,7 +293,7 @@ export const initCommand = defineCommand({
           if (results.format !== "react-intl") return undefined;
           return p.text({
             message: "Catalog path template (use {locale} placeholder)",
-            placeholder: "lang/{locale}.json",
+            placeholder: "i18n/{locale}.json",
             validate: (v) => {
               if (!(v ?? "").trim()) return "Catalog path is required";
               if (!(v as string).includes("{locale}"))
