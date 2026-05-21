@@ -128,9 +128,9 @@ The CLI reads your `lingui.config.*` (or `package.json` `"lingui"` key) via `@li
 ## Build
 
 ```bash
-pnpm build       # bun build --compile → dist/p6t (self-contained binary)
-pnpm build:dev   # tsup → dist/ (for development/testing without Bun)
+pnpm build       # tsup → dist/index.js (ESM, shebang included)
+pnpm build:dev   # tsup --watch
 pnpm typecheck   # tsc --noEmit
 ```
 
-The production binary has no runtime dependency on Node.js or Bun. Bun is a compile-time tool only.
+Requires Node 22+. No other runtime needed.

@@ -43,11 +43,10 @@ Turborepo's `"dependsOn": ["^build"]` means `typecheck` and `test` trigger upstr
 
 ## Toolchain quirks
 
-### CLI build requires Bun
-- Production CLI binary: `bun build --compile src/index.ts --outfile dist/p6t` (self-contained, no Node runtime).
-- Dev build uses `tsup` (`pnpm --filter @p6t/cli build:dev`).
-- **Bun is a compile-time tool only** — not the dev runtime. Node 22 is the dev runtime.
-- CI does **not** install Bun yet — `pnpm build` for `@p6t/cli` will fail in CI until a `setup-bun` step is added.
+### CLI build
+- Uses `tsup` — outputs `dist/index.js` (ESM, shebang included). No special tooling required beyond Node 22.
+- `pnpm build` works in CI and locally without any additional setup.
+- `pnpm build:dev` runs tsup in watch mode.
 
 ### `packages/config` scope
 `@p6t/config` contains the `i18n.json` config schema and shared types (`TranslationUnit`, `TranslationResult`). It has no React or i18n library dependency.
@@ -116,7 +115,6 @@ If framing and shaping happened during the session, the changeset summary must r
 |---|---|---|
 | Install | `--frozen-lockfile` | `pnpm install` |
 | Node | 22 (pinned) | any |
-| Bun | **not installed** | must be installed for CLI build |
 | Lint | not run | `pnpm lint` |
 | Steps | build → typecheck → test | run individually |
 
