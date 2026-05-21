@@ -1,78 +1,25 @@
 # p6t (polyglot)
 
-AI-powered auto-translation CLI for React apps. Works with **react-intl** (default) and **Lingui** (experimental). Uses your own LLM API key — no external service required.
+p6t is a CLI that generates native-quality translations for React apps. Uses your own LLM API key and works with **react-intl** (default) and **Lingui** (experimental).
 
-## Packages
+p6t is a CLI that produces native-quality translations for React apps on demand. Works with **react-intl** (default) and **Lingui** (experimental). Uses your own LLM API key — no external service required.
 
-| Package | Description | Status |
-|---|---|---|
-| [`@p6t/config`](./packages/config) | Config schema and shared types (`i18n.json`, `TranslationUnit`, `TranslationResult`) | stable |
-| [`@p6t/cli`](./packages/cli) | Developer CLI — `p6t init`, `p6t translate`, push/pull | v0 |
-
-## Toolchain
-
-| Tool | Role |
-|---|---|
-| pnpm | Package manager (workspaces) |
-| Turborepo | Task orchestration and caching |
-| TypeScript | Language (strict mode throughout) |
-| tsup | Build tool for `packages/*` |
-| Bun | Compile-only — produces the `@p6t/cli` binary |
-| Changesets | Versioning and changelog |
+p6t is a CLI that generates native-quality translations for React apps. It connects your codebase to your own LLM API key for straightforward localization. Supports react-intl (default) and Lingui (experimental).
 
 ## Getting started
 
-```bash
-pnpm install
-pnpm build
+```sh
+# Make sure the API key for the generative AI provider of your choice 
+# is available in .env or provide it explicitly in the terminal. e.g.
+# export GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
+
+
+# 1. Install as a dev dependency
+pnpm add -D @p6t/cli
+
+# 2. Initialize the config
+pnpm p6t init
+
+# 3. Run your first translation
+pnpm p6t translate
 ```
-
-## Repository structure
-
-```
-.
-├── apps/
-│   └── docs/                   # Nextra documentation site
-│
-├── packages/
-│   ├── config/                 # @p6t/config — config schema and shared types
-│   └── cli/                    # @p6t/cli — developer CLI
-│
-├── turbo.json
-├── pnpm-workspace.yaml
-└── package.json
-```
-
-## Translation pipeline
-
-`p6t translate` sits between the extraction step and the compile step of whichever library you use:
-
-```bash
-# react-intl
-formatjs extract && p6t translate && formatjs compile-folder
-
-# Lingui (experimental)
-lingui extract && p6t translate && lingui compile
-```
-
-`p6t translate` reads untranslated strings from extracted catalogs, sends them to an LLM (OpenAI, Anthropic, Google, Mistral, Ollama, or OpenRouter), and writes the results back. It never re-translates strings that are already translated.
-
-Translation quality is driven by three committed context files created by `p6t init`:
-
-| File | Purpose |
-|---|---|
-| `i18n/description.md` | Project description for translators — domain, users, vocabulary |
-| `i18n/{locale}/style-guide.md` | Per-locale tone, formality, and brand voice rules |
-| `i18n/{locale}/glossary.json` | Source → target term mapping for key vocabulary |
-
-## Versioning and publishing
-
-This repo uses [Changesets](https://github.com/changesets/changesets).
-
-```bash
-pnpm changeset          # author a changeset
-pnpm changeset version  # bump versions + update CHANGELOGs
-pnpm changeset publish  # publish to npm
-```
-
-`@p6t/config` and `@p6t/cli` are published to npm.
