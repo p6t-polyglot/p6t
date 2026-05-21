@@ -1,6 +1,6 @@
 {
   "name": "@p6t/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Developer CLI for p6t — extract, push, pull, and check translation coverage",
   "type": "module",
   "bin": {
