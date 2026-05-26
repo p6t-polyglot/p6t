@@ -1,8 +1,4 @@
 const meta = {
-  index: {
-    title: "Home",
-    type: "page",
-  },
   "getting-started-react-intl": {
     title: "Getting Started (React Intl)",
   },

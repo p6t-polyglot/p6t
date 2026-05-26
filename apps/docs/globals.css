@@ -1,3 +1,19 @@
 @import "tailwindcss";
 @import 'nextra-theme-docs/style.css';
 @variant dark (&:where(.dark *));
+
+:root {
+  --landing-grid: rgba(0, 0, 0, 0.06);
+}
+
+.dark {
+  --landing-grid: rgba(255, 255, 255, 0.06);
+}
+
+.landing-canvas {
+  background-image:
+    linear-gradient(to right, var(--landing-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--landing-grid) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  background-position: center top;
+}
