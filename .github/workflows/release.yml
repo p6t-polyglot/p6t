@@ -11,6 +11,11 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +35,6 @@ jobs:
       - name: Create release PR or publish
         uses: changesets/action@v1
         with:
-          publish: pnpm changeset publish
+          publish: pnpm changeset publish --provenance
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

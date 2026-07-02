@@ -35,6 +35,19 @@ function readFileSafe(filePath: string): string | undefined {
   }
 }
 
+function readExistingConfig(cwd: string): Partial<Config> | undefined {
+  const raw = readFileSafe(path.join(cwd, CONFIG_FILE));
+  if (!raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Partial<Config>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function resolveContextPath(
   template: string,
   locale: string,
@@ -229,20 +242,16 @@ export const initCommand = defineCommand({
 
     const cwd = process.cwd();
 
-    if (fs.existsSync(path.join(cwd, CONFIG_FILE))) {
-      const overwrite = await p.confirm({
-        message: `${CONFIG_FILE} already exists. Overwrite?`,
-        initialValue: false,
-      });
-      if (p.isCancel(overwrite) || !overwrite) {
-        p.cancel("Aborted.");
-        process.exit(0);
-      }
+    const existing = readExistingConfig(cwd);
+    if (existing) {
+      p.log.info(`Found existing ${CONFIG_FILE} — using it as defaults.`);
     }
 
     // ── Prompts ──────────────────────────────────────────────────────────────
 
-    const detectedFormat = detectFormatFromFiles(cwd);
+    const detectedFormat = existing?.format ?? detectFormatFromFiles(cwd);
+    const existingTargets = existing?.locale?.targets?.join(", ");
+    const existingCatalogPath = existing?.catalogs?.[0]?.path;
 
     const answers = await p.group(
       {
@@ -251,11 +260,15 @@ export const initCommand = defineCommand({
             message: "Source locale (language your strings are written in)",
             placeholder: "en",
             defaultValue: "en",
+            ...(existing?.locale?.source
+              ? { initialValue: existing.locale.source }
+              : {}),
           }),
         targetLocales: () =>
           p.text({
             message: "Target locales (comma-separated)",
             placeholder: "de, fr, es",
+            ...(existingTargets ? { initialValue: existingTargets } : {}),
             validate: (v) =>
               (v ?? "").trim()
                 ? undefined
@@ -264,6 +277,9 @@ export const initCommand = defineCommand({
         providerId: () =>
           p.select({
             message: "LLM provider",
+            ...(existing?.provider?.id
+              ? { initialValue: existing.provider.id }
+              : {}),
             options: [
               { value: "openai", label: "OpenAI" },
               { value: "anthropic", label: "Anthropic" },
@@ -277,6 +293,9 @@ export const initCommand = defineCommand({
           p.text({
             message: "Model name",
             placeholder: "gpt-4o",
+            ...(existing?.provider?.model
+              ? { initialValue: existing.provider.model }
+              : {}),
             validate: (v) =>
               (v ?? "").trim() ? undefined : "Model name is required",
           }),
@@ -294,6 +313,9 @@ export const initCommand = defineCommand({
           return p.text({
             message: "Catalog path template (use {locale} placeholder)",
             placeholder: "i18n/{locale}.json",
+            ...(existingCatalogPath
+              ? { initialValue: existingCatalogPath }
+              : {}),
             validate: (v) => {
               if (!(v ?? "").trim()) return "Catalog path is required";
               if (!(v as string).includes("{locale}"))

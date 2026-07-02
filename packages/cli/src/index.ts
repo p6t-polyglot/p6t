@@ -1,3 +1,4 @@
+import './load-env.ts'
 import { defineCommand, runMain } from 'citty'
 import { translateCommand } from './commands/translate.ts'
 import { initCommand } from './commands/init.ts'
