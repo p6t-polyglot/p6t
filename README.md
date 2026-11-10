@@ -20,6 +20,31 @@ pnpm p6t init
 pnpm p6t translate
 ```
 
+## Agent skills
+
+Two skills teach your coding agent to write translatable UI and to wire up p6t:
+
+- [translatability](skills/translatability/SKILL.md) — source-first UI development and review. Works with or without p6t.
+- [integrate-p6t](skills/integrate-p6t/SKILL.md) — add p6t to an existing React app, with react-intl or Lingui.
+
+### 1. Install
+
+```sh
+npx skills add p6t-polyglot/p6t -g
+```
+
+The [skills CLI](https://skills.sh) detects your agent (Claude Code, Codex, OpenCode, Cursor, …) and installs both skills where it looks for them. Drop `-g` to install only into the current project, add `--skill translatability` to install one skill, or `--list` to inspect first.
+
+### 2. Tell your agent to use them
+
+Name the skill in your request:
+
+- “Use the `translatability` skill while adding this settings form.”
+- “Review this UI for translatability, including errors and accessible labels.”
+- “Use the `integrate-p6t` skill to add German and French to this React app. Inspect the existing setup and propose a plan first.”
+
+Restart your agent if it does not pick up the new skills. To apply translatability by default, add the skill to the repo's `AGENTS.md`. More examples are in [skills/](skills/README.md).
+
 ## How it works
 
 p6t sends your missing translations directly to your LLM provider of choice (OpenAI, Gemini, etc.) and writes native-quality translation results back. It does this by first scaffolding a setup that includes a style guide of your brand voice, which you have full control over to customize it as your product matures, and then grouping related translations, so that closely related translations have an inner coherence.
