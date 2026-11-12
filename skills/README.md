@@ -5,7 +5,7 @@ Two companion skills, usable independently:
 | Skill | Purpose |
 |---|---|
 | [translatability](translatability/SKILL.md) | Everyday source-first UI development: intent-rich messages, generated IDs, explicit code reuse, and locale-aware presentation. Does not require p6t. |
-| [integrate-p6t](integrate-p6t/SKILL.md) | Add p6t to an existing React repo, with or without i18n; covers react-intl, experimental Lingui support, locale UX, configuration, and the translation pipeline. |
+| [integrate-p6t](integrate-p6t/SKILL.md) | Add p6t to JS/TS repos with or without React/i18n; covers FormatJS, experimental Lingui, document/viewer language, embedded delivery, and the translation pipeline. |
 
 ## Install and share
 
@@ -15,13 +15,14 @@ Once these files are available in the GitHub repository:
 pnpm dlx skills add p6t-polyglot/p6t
 ```
 
-To install only one, append `--skill translatability` or `--skill integrate-p6t`. Choose the target agent/location through the installer's options or prompts. Alternatively, copy the desired skill directory, including its reference files, into your agent's supported skills directory. Neither skill requires scripts, a p6t source checkout, or the companion skill.
+To install only one, append `--skill translatability` or `--skill integrate-p6t`. Choose the target agent/location through the installer's options or prompts. Alternatively, copy the desired skill directory, including its references and bundled recipe scripts, into your agent's supported skills directory. Neither skill requires a p6t source checkout or the companion skill. The optional no-transform/catalog-test recipes copy their helper scripts into the target package.
 
 ## Example requests
 
 - “Use translatability while adding this settings form. Keep messages beside their usage; share concepts through code, not translation keys.”
 - “Review this UI for translatability, including errors and accessible labels.”
 - “Use integrate-p6t to add German and French to this React app. Inspect the existing setup and propose a plan first.”
+- “Add German to our plain-TypeScript widget without React or compiler plugins. Artifact language belongs to the project; viewer chrome follows the host.”
 - “Connect p6t to our existing Lingui catalogs without changing locale routing.”
 
 For everyday guidance, consider adding this to the target repo's `AGENTS.md` after agreeing on it:

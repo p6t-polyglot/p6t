@@ -1,6 +1,6 @@
 ---
 name: translatability
-description: Guides source-first, translator-friendly UI development and review. Use when creating or changing user-facing UI, reviewing localization, or sharing translated messages through code rather than hand-written translation keys. Applies with or without p6t.
+description: Guides source-first, translator-friendly UI and generated-artifact development and review. Use when changing user-facing text, separating document language from viewer chrome, reviewing localization, or sharing messages through code rather than hand-written translation keys. Applies with or without React or p6t.
 ---
 
 # Translatability
@@ -23,7 +23,7 @@ Use the project's i18n library and extraction conventions. This skill does not r
 ## Workflow
 
 1. Inspect the repo instructions, i18n configuration, representative components, and scripts until the library, message conventions, and extraction/build path are identified.
-2. Establish the changed UI's user goal, message placement, and action consequences. Ask about intent that the code does not establish.
+2. Establish the changed surface's user goal, message placement, action consequences, and language owner (artifact, viewer, or model-facing). Ask about intent that the code does not establish.
 3. Apply the principles below to every changed user-facing surface, including loading, empty, error, and accessible states.
 4. Complete the verification checklist; report any blocked checks explicitly.
 
@@ -35,7 +35,7 @@ If no i18n infrastructure exists, agree on a setup before introducing translatio
 
 - Use generated IDs instead of hand-written catalog keys such as `common.save`. Code should reveal the source wording and intent without opening a catalog.
 - Keep generated hashes private to the toolchain. Link application behavior through code symbols, not copied catalog IDs.
-- Colocate messages at their usage site by default; extract into shared code for genuine reuse. Keep declarations statically visible to extraction and build transforms.
+- Colocate messages at their usage site by default; extract into shared code for genuine reuse. Keep declarations statically visible to extraction and the chosen ID-resolution path.
 - In a key-based codebase, explain the source-first direction and agree on migration separately; preserve the existing contract until then.
 
 ### Share meaning through code
@@ -43,8 +43,9 @@ If no i18n infrastructure exists, agree on a setup before introducing translatio
 - When two places genuinely express the same domain concept, share a component, function, or message descriptor through ordinary imports and symbol references.
 - Make sharing discoverable through ordinary symbol references, not a string-key registry disguised as a helper.
 - Identical source wording does not imply identical meaning. An “Open” action and an “Open” status are separate messages with separate context.
-- Use the library's disambiguation/context mechanism where needed. A translator comment alone does not necessarily produce a distinct ID.
-- Share definitions, not module-level translated strings. Resolve them with the current locale at render/request time, and remain reactive to locale changes.
+- **FormatJS** (`react-intl` or `@formatjs/intl`): generated IDs hash source text and `description`. Same text + different descriptions → distinct IDs; same text + same description → intentionally one message. An absent and an empty description are equivalent for identity.
+- **Lingui:** use `context` to disambiguate meaning. Its translator `comment` does not affect generated identity.
+- Share definitions, not module-level translated strings. Resolve them with the owning locale at render/export time, and remain reactive to changes of that locale.
 
 ### Capture intent at write-time
 
@@ -67,15 +68,31 @@ If no i18n infrastructure exists, agree on a setup before introducing translatio
 - Include headings, buttons, menus, placeholders, tooltips, validation, errors, toasts, metadata, and screen-reader text. Keep intentionally empty decorative `alt` text empty.
 - Keep database values, enum members, protocol fields, and machine identifiers stable; translate their presentation at the UI boundary.
 - Allow text expansion and different writing directions with layouts and icons that suit the active language.
-- On the server, keep locale-specific state request-scoped and aligned with client hydration.
+- Keep locale-specific formatters isolated to their owner: request-scoped for viewer SSR, document/export-scoped for artifacts. Reuse formatter caches, not a mutable global locale; align viewer SSR with client hydration.
+
+### Separate language owners
+
+Ask **“Would this string still be in an exported PDF or image?”**
+
+| Owner | Examples | Language source |
+|---|---|---|
+| Artifact text | Plan legend, dimensions, PDF/image title | Stored document/project language |
+| Viewer chrome | Toolbar, statuses, accessible names, walkthrough controls | Client/host preference, query parameter, or browser locale |
+| Model-facing text | Prompts, tool descriptions, model-consumed errors/warnings | English |
+
+Persist artifact language as document data; validate it when creating/loading a document and pass it explicitly to renderers/exporters. Reopening/exporting the same stored document must not adopt the current viewer's language. Language changes to the artifact are explicit document edits. Set `lang` on generated SVG/HTML (and direction when applicable); client chrome can have a different language.
+
+Localize user-visible errors at the presentation boundary, while preserving English model-facing diagnostics and stable machine codes. Do not translate prompts or tool schemas as a side effect of localizing the UI.
 
 ## Verification
 
 - [ ] New and changed messages extract with source text, intent, and available source references; shared definitions are extracted too.
+- [ ] Same-text/different-description FormatJS messages generate different IDs. A no-transform setup fails tests for descriptors missing from its generated-ID map.
 - [ ] No new magic keys, sentence fragments, unlocalized UI states, or stale pretranslated constants.
 - [ ] Placeholders and ICU syntax compile; required translations are present rather than merely hidden by fallback.
 - [ ] Test the source locale and a target locale: plural boundaries, long text, accessible names, formatting, and switching locale without stale text. Check RTL when supported.
 - [ ] Review catalog diffs; do not overwrite human translations or prune against an incomplete extraction.
+- [ ] Switching viewer language leaves document data and exported wording unchanged; re-export uses stored artifact language and correct SVG/HTML `lang`.
 
 Run the repo's pipeline where available. Obtain permission before sending strings/context to a provider or incurring translation costs. Never fabricate translations or claim a check passed when credentials or infrastructure are missing.
 

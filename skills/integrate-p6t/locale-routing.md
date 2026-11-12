@@ -1,4 +1,4 @@
-# Locale selection by route type
+# Locale selection with or without routing
 
 Decide how users choose and retain their language before reorganizing routes. Preserve an established working policy; these are defaults for an app that has not chosen one, not a requirement to migrate every authenticated URL.
 
@@ -7,8 +7,26 @@ Decide how users choose and retain their language before reorganizing routes. Pr
 | Public/indexable | Explicit URL segment | `/de/about` |
 | Private/authenticated | Saved user profile preference | `/dashboard` |
 | Sign-in/sign-up | Last selected locale in a cookie, then default | `/login` |
+| Embedded viewer | Host-context locale, then query/browser fallback | No locale route required |
+| Standalone viewer | `?lang=`, then saved viewer/browser fallback | `/widget?lang=de` |
+| Generated artifact | Stored document/project language | Independent of viewer URL |
 
 Browser `Accept-Language` is a fallback for new visitors, not authority over an explicit URL or saved choice. Do not add profile database work when integrating only a catalog pipeline.
+
+## No routing: widgets, standalone pages, and documents
+
+Keep the existing product policy. If none exists, agree on these defaults, validating each candidate against the supported-locale list before accepting it:
+
+- **Embedded viewer chrome:** host-context locale → `?lang=` → browser locale → source/default locale. Host context is authoritative; if the product permits a local override, model it explicitly rather than silently writing document language.
+- **Standalone viewer chrome:** `?lang=` → saved viewer preference (if one already exists) → browser locale → source/default locale.
+- **Artifact text:** stored document/project language wins. Choose and persist it at creation; migrate missing/unsupported values using a deliberate stable default, not the current viewer/browser locale. An explicit document-language edit can change it; changing viewer chrome cannot.
+- **Model-facing prompts/tools/diagnostics:** English, outside locale negotiation.
+
+Normalize host/browser language tags with an agreed matching policy (e.g. `de-DE` → supported `de`), then validate. Treat query/host input as untrusted, never as an import path. Load **only the selected catalog for each language owner** before activation; artifact and viewer may legitimately select different catalogs. For a self-contained single-HTML deployment, inline all supported catalogs instead of fetching/chunking (see [react-intl.md](react-intl.md)), but still activate only the selected one per formatter.
+
+Pass document language explicitly to artifact renderers/exporters, set `lang` on generated SVG/HTML, and retain it on reload/re-export. Set viewer HTML language/direction independently. Keep host-context changes reactive for viewer chrome without mutating stored document data. A formatter is document/export-scoped for artifacts and client/request-scoped for chrome; neither belongs in a mutable global locale.
+
+Test host/query conflicts, unsupported values, browser fallback, host changes after mount, offline single-file delivery, and reopening/exporting the same document under a different viewer locale. Do not introduce routes, cookies, or a profile database just to satisfy routing-oriented examples below.
 
 ## Central locale model
 
@@ -24,7 +42,7 @@ export function isLocale(value: unknown): value is Locale {
 }
 ```
 
-Validate URL segments, cookie values, and profile preferences at runtime. A TypeScript assertion such as `cookieValue as Locale` is not validation. Reject unsupported public segments or apply an agreed canonical redirect; use the default for invalid optional preferences. Load catalogs through an allowlist of supported locales.
+Validate URL segments, host/query values, stored document language, cookie values, and profile preferences at runtime. A TypeScript assertion such as `cookieValue as Locale` is not validation. Reject unsupported public segments or apply an agreed canonical redirect; use the agreed fallback for invalid optional preferences. Load catalogs through an allowlist of supported locales.
 
 Keep the i18n library, p6t source/targets, locale picker, and routing model aligned. A user timezone or billing currency is a separate preference from language.
 

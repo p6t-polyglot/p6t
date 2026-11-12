@@ -21,6 +21,10 @@
     "test": {
       "dependsOn": ["^build"]
     },
+    "@p6t/cli#test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/skills/integrate-p6t/scripts/**"]
+    },
     "clean": {
       "cache": false
     }

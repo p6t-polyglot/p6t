@@ -1,6 +1,6 @@
 # Translatability examples
 
-The principles are library-independent. These examples use react-intl and Lingui without hand-written catalog IDs; the matching build transform and extractor must be configured.
+The principles are library-independent. These examples use react-intl and Lingui without hand-written catalog IDs. FormatJS also works without React via `@formatjs/intl`; pair extraction with either a matching runtime transform or a generated descriptor-to-ID map, as described in the `integrate-p6t` skill. Lingui's macro examples need its transform.
 
 ## Source and intent stay together
 
@@ -40,7 +40,7 @@ const intl = useIntl()
 const label = intl.formatMessage(deleteAccountConfirmation)
 ```
 
-Consumers import `deleteAccountConfirmation`; they do not know or repeat its generated ID. Both extraction and runtime transforms must process the defining module. A shared descriptor is an exception for genuine reuse, not a reason to move every message away from its component.
+Consumers import `deleteAccountConfirmation`; they do not know or repeat its generated ID. Extraction must cover the defining module; wire its IDs through the chosen transform or generated map. A shared descriptor is an exception for genuine reuse, not a reason to move every message away from its component.
 
 For a domain value with several presentations, share a typed function containing static messages:
 
@@ -131,7 +131,7 @@ export const deleteAccountConfirmation = msg({
 })
 ```
 
-Consumers import the descriptor and resolve it with their active `i18n._(deleteAccountConfirmation)`. In React, obtain the instance through `useLingui()` so locale changes cause rendering; on the server, use the request's instance. Use imports supported by the installed Lingui version.
+Consumers import the descriptor and resolve it with their active `i18n._(deleteAccountConfirmation)`. In React, obtain the instance through `useLingui()` so locale changes cause rendering; on the server, use the owning request's instance (or document/export's instance for artifacts). Use imports supported by the installed Lingui version.
 
 ## Formatting is not translation by concatenation
 

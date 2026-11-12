@@ -7,7 +7,7 @@ LLM-powered translation pipeline CLI for p6t.
 | Command | Description |
 |---|---|
 | `p6t init` | Scaffold `i18n.json` and context files; optionally drafts them with an LLM |
-| `p6t translate` | Translate missing strings in Lingui catalogs using an LLM |
+| `p6t translate` | Translate missing strings in FormatJS or experimental Lingui catalogs using an LLM |
 | `p6t push` | Push translations to p6t web for human review _(coming soon)_ |
 | `p6t pull` | Pull confirmed translations from p6t web _(coming soon)_ |
 
@@ -15,20 +15,32 @@ LLM-powered translation pipeline CLI for p6t.
 
 ```bash
 # 1. Install
-npm install -g @p6t/cli
+pnpm add -D @p6t/cli
 
 # 2. Initialise — creates i18n.json and context files
-p6t init
+pnpm exec p6t init
 
 # 3. Extract strings (Lingui)
-lingui extract
+pnpm exec lingui extract
 
-# 4. Translate
-p6t translate
+# 4. Seed/review target glossaries, then translate
+pnpm exec p6t translate
 
-# 5. Compile (Lingui)
-lingui compile
+# 5. Review target catalogs, then compile (Lingui)
+pnpm exec lingui compile
 ```
+
+For FormatJS, use `react-intl` in React or `@formatjs/intl` without React; both use `format: "react-intl"` and extracted JSON catalog paths in `i18n.json`.
+
+## Agent / CI output
+
+`p6t translate` supports:
+
+- `--quiet` / `-q`: per-file summaries and diagnostics only.
+- `--no-progress`: disable interactive progress; it is also disabled automatically when stdout is not a TTY.
+- `--json`: a single JSON object on stdout, with no progress or raw responses (even with `--verbose`). Adapter diagnostics may still appear on stderr.
+
+The JSON contains `files` and top-level fatal/setup `errors`. Each file has `locale`, `sourcePath`, `targetPath`, `pending`, `translated`, `missing`, `failed`, `removed`, and an `errors` array. Counts describe this run, including zero-count up-to-date files. `failed` counts strings in failed groups; `missing` counts strings omitted by the model. Incomplete translation exits nonzero; coverage tests and target-language review are still required.
 
 ## Configuration — `i18n.json`
 
@@ -83,12 +95,14 @@ Ties this project to a p6t web project. Required for `push` and `pull` once web 
 |---|---|
 | `OPENAI_API_KEY` | OpenAI |
 | `ANTHROPIC_API_KEY` | Anthropic |
-| `GOOGLE_AI_API_KEY` or `GEMINI_API_KEY` | Google |
+| `GOOGLE_GENERATIVE_AI_API_KEY` or `GOOGLE_API_KEY` | Google |
 | `MISTRAL_API_KEY` | Mistral |
 | `OPENROUTER_API_KEY` | OpenRouter |
 | `P6T_API_KEY` | p6t web (push/pull) |
 
 Ollama requires no API key — set `provider.baseUrl` if your Ollama server is not on `localhost:11434`.
+
+Current source loads env files from the working directory with precedence **shell → `.env.local` → `.env`**. Published `0.1.0` has no env-file loader: export credentials or use Node 22's explicit loader, e.g. `node --env-file=.env.local ./node_modules/@p6t/cli/dist/index.js translate`. Keep credentials ignored and out of browser bundles.
 
 ## Context files
 
