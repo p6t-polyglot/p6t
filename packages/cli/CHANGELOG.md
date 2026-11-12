@@ -1,5 +1,21 @@
 # @p6t/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- 6463a96: Restore `.env` loading and make `init` a real update flow.
+
+  Two papercuts surfaced once the CLI moved from a bundled Bun executable to plain Node. Bun had been quietly loading `.env` files for you, so when that magic disappeared, provider API keys kept in a `.env`/`.env.local` silently stopped being found — the kind of failure that makes you doubt your own keys. The CLI now loads them itself, matching Bun's precedence (shell environment wins, then `.env.local` over `.env`), so nothing exported in your shell is ever clobbered.
+
+  Re-running `p6t init` used to greet you with a scary "overwrite?" prompt and then throw away everything you'd already configured. Now it treats an existing `i18n.json` as the starting point: every prompt is pre-filled with your current values and you simply step through and tweak what changed.
+
+- cce1871: Make translation runs quiet and inspectable in agents and CI, without spinner redraws burying the result.
+
+  `p6t translate` now supports `--quiet` / `-q`, `--no-progress`, and `--json`. Progress is automatically disabled when stdout is not a TTY. Plain output gives concise per-file summaries; JSON reports pending, translated, missing, failed, and removed counts plus errors, without mixing in progress or raw model responses.
+
+  Incomplete translations now exit nonzero when groups fail or the model omits results, so CI can distinguish a complete run from one that still needs attention. Existing automation that relied on a successful exit despite partial results must handle this change.
+
 ## 0.1.0
 
 ### Minor Changes
