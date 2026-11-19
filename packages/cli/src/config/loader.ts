@@ -12,7 +12,7 @@ export class ConfigError extends Error {
 }
 
 /** Walk up from cwd until we find i18n.json, or return null. */
-function findConfigFile(startDir: string): string | null {
+export function findConfigFile(startDir: string): string | null {
   let dir = startDir
   while (true) {
     const candidate = path.join(dir, CONFIG_FILE)

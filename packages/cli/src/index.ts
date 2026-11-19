@@ -16,6 +16,7 @@ const main = defineCommand({
     init: initCommand,
     push: pushCommand,
     pull: pullCommand,
+    mcp: () => import('./commands/mcp.ts').then(({ mcpCommand }) => mcpCommand),
   },
 })
 

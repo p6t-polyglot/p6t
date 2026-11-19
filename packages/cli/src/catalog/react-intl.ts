@@ -38,6 +38,10 @@ type ReactIntlTargetEntry = {
 
 type ReactIntlTargetCatalog = Record<string, ReactIntlTargetEntry>;
 
+interface ReactIntlCatalogAdapter extends CatalogAdapter {
+  readStaleKeys(targetPath: string, sourcePath: string): OrphanedTranslation[];
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -72,6 +76,41 @@ function isRichCatalog(obj: unknown): obj is Record<string, ReactIntlSourceEntry
   );
 }
 
+function readCatalogForSync(filePath: string, role: "source" | "target") {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, "utf8");
+  } catch (error) {
+    if (role === "target" && (error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+  let catalog: unknown;
+  try {
+    catalog = JSON.parse(raw);
+  } catch {
+    throw new Error(`Invalid JSON in ${role} catalog: ${filePath}`);
+  }
+  if (
+    !catalog || typeof catalog !== "object" || Array.isArray(catalog) ||
+    !(isRichCatalog(catalog) || (
+      (role === "source" || Object.keys(catalog).length === 0) &&
+      Object.values(catalog).every((entry) => typeof entry === "string")
+    ))
+  ) {
+    throw new Error(`Unsupported ${role} catalog format: ${filePath}`);
+  }
+  return catalog;
+}
+
+function findStaleKeys(catalog: ReactIntlTargetCatalog, source: object): OrphanedTranslation[] {
+  return Object.entries(catalog).flatMap(([id, entry]) => Object.hasOwn(source, id) ? [] : [{
+    id,
+    source: entry._p6t_source,
+    translation: entry.defaultMessage,
+    context: entry._p6t_description,
+  }]);
+}
+
 function discoverJsonFiles(cwd: string): string[] {
   const candidates: string[] = [];
   const dirs = [
@@ -103,7 +142,7 @@ function discoverJsonFiles(cwd: string): string[] {
 export function createReactIntlAdapter(
   configDir: string,
   catalogs: Config["catalogs"],
-): CatalogAdapter {
+): ReactIntlCatalogAdapter {
   if (!catalogs || catalogs.length === 0) {
     throw new Error(
       "react-intl adapter requires catalogs configured in i18n.json",
@@ -116,6 +155,12 @@ export function createReactIntlAdapter(
 
   return {
     getCatalogPathsForLocale,
+
+    readStaleKeys(targetPath, sourcePath) {
+      const source = readCatalogForSync(sourcePath, "source");
+      const target = readCatalogForSync(targetPath, "target") as ReactIntlTargetCatalog;
+      return findStaleKeys(target, source);
+    },
 
     readPendingTranslations(targetPath: string, sourcePath: string): PendingTranslations {
       const sourceCatalog =
@@ -133,7 +178,9 @@ export function createReactIntlAdapter(
         const targetValue = targetCatalog[id];
         if (
           typeof targetValue?.defaultMessage === "string" &&
-          targetValue.defaultMessage.trim() !== ""
+          targetValue.defaultMessage.trim() !== "" &&
+          (targetValue._p6t_source === undefined ||
+            targetValue._p6t_source === (isRich ? (entry as ReactIntlSourceEntry).defaultMessage : entry))
         ) {
           continue;
         }
@@ -196,9 +243,9 @@ export function createReactIntlAdapter(
 
       let catalog: ReactIntlTargetCatalog;
       if (fs.existsSync(targetPath)) {
-        catalog = readJsonSafe<ReactIntlTargetCatalog>(targetPath) ?? {};
+        catalog = Object.assign(Object.create(null), readJsonSafe<ReactIntlTargetCatalog>(targetPath));
       } else {
-        catalog = {};
+        catalog = Object.create(null);
       }
 
       // Merge results into catalog, preserving _p6t_* metadata from previous writes
@@ -220,7 +267,7 @@ export function createReactIntlAdapter(
       }
 
       // Preserve order from source catalog where possible
-      const ordered: ReactIntlTargetCatalog = {};
+      const ordered: ReactIntlTargetCatalog = Object.create(null);
       if (sourceCatalog) {
         for (const id of Object.keys(sourceCatalog)) {
           if (id in catalog) {
@@ -252,24 +299,10 @@ export function createReactIntlAdapter(
         );
       if (!sourceCatalog) return [];
 
-      const orphans: OrphanedTranslation[] = [];
-      let modified = false;
+      const orphans = findStaleKeys(catalog, sourceCatalog);
+      for (const { id } of orphans) delete catalog[id];
 
-      for (const id of Object.keys(catalog)) {
-        if (!(id in sourceCatalog)) {
-          const entry = catalog[id];
-          orphans.push({
-            id,
-            source: entry._p6t_source,
-            translation: entry.defaultMessage,
-            context: entry._p6t_description,
-          });
-          delete catalog[id];
-          modified = true;
-        }
-      }
-
-      if (modified) {
+      if (orphans.length > 0) {
         fs.mkdirSync(path.dirname(targetPath), { recursive: true });
         fs.writeFileSync(targetPath, JSON.stringify(catalog, null, 2) + "\n");
       }

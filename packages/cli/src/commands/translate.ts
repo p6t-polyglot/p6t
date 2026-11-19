@@ -71,8 +71,17 @@ export const translateCommand = defineCommand({
         throw new Error("Invalid --max-orphans value. Must be a non-negative integer.");
       }
 
+      if (!config.provider) {
+        throw new Error("Configure provider in i18n.json for direct translation, or use p6t mcp with your agent.");
+      }
       const model = createModel(config.provider);
-      const translator = new DefaultTranslator(model, config.provider.prompt, undefined, maxOrphans);
+      const translator = new DefaultTranslator(
+        model,
+        config.provider.prompt,
+        undefined,
+        maxOrphans,
+        config.translationInstructions,
+      );
       const adapter = await createAdapter(config, configDir);
 
       for (const targetLocale of targetLocales) {

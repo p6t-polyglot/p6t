@@ -1,24 +1,43 @@
 # p6t (polyglot)
 
-p6t is a CLI that generates native-quality translations for React apps. Uses your own LLM API key and works with **react-intl** (default) and **Lingui** (experimental).
+p6t keeps translation catalogs up to date for React apps. Use your coding agent through MCP for **react-intl**, or run the CLI with your own LLM provider for **react-intl** or **Lingui** (experimental).
 
-## Getting started
+## Getting started with MCP (recommended for react-intl)
+
+Install `@p6t/cli` as a dev dependency with `pnpm add -D @p6t/cli`. Register this local **stdio** command in your agent host:
 
 ```sh
-# Make sure the API key for the generative AI provider of your choice 
-# is available in .env or provide it explicitly in the terminal. e.g.
-# export GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
-
-
-# 1. Install as a dev dependency
-pnpm add -D @p6t/cli
-
-# 2. Initialize the config
-pnpm p6t init
-
-# 3. Run your first translation
-pnpm p6t translate
+pnpm --dir /absolute/path/to/project exec p6t mcp
 ```
+
+For a new project, ask the agent to **“Set up p6t for English and German.”** `inspect_project` looks for existing configuration and catalogs; `init_project` scaffolds configuration and context files after you agree on the locales and paths. It won’t overwrite existing context.
+
+The resulting `i18n.json` needs no `provider` or separate p6t model key:
+
+```json
+{
+  "$schema": "https://p6t.dev/schema/i18n.json",
+  "version": 1,
+  "format": "react-intl",
+  "locale": { "source": "en", "targets": ["de"] },
+  "catalogs": [{ "path": "i18n/{locale}.json" }]
+}
+```
+
+Ask your agent: **“Refresh the source catalog and bring German up to date with p6t.”**
+
+```text
+Refresh source catalog → prepare_locale (read only) → agent translates
+    → apply_locale (validate, write, prune) → review the Git diff
+```
+
+The agent uses its existing model. p6t still prunes obsolete keys when there’s nothing to translate. For a review without edits, ask the agent to report the plan only.
+
+No skill is required. Ask the agent to use `inspect_project` when drafting or reviewing the project brief and locale guides. It returns a recipe for grounding the brief in product evidence and writing rules that change real translation decisions. Glossary suggestions stay in review until you approve a specific entry.
+
+## Direct CLI
+
+For unattended translation or Lingui, run `pnpm exec p6t init`, configure your provider credentials outside version control, then run `pnpm exec p6t translate`.
 
 ## Agent skills
 
@@ -47,7 +66,7 @@ Restart your agent if it does not pick up the new skills. To apply translatabili
 
 ## How it works
 
-p6t sends your missing translations directly to your LLM provider of choice (OpenAI, Gemini, etc.) and writes native-quality translation results back. It does this by first scaffolding a setup that includes a style guide of your brand voice, which you have full control over to customize it as your product matures, and then grouping related translations, so that closely related translations have an inner coherence.
+With `p6t translate`, p6t sends missing messages directly to your configured LLM provider. With `p6t mcp`, your coding agent drafts the translations. Both paths use the project's locale context, including its glossary and style guide.
 
 For the result to sound really good, p6t requires context on your source strings, including the source file and a description of the translation that captures the intent of the element. If you're starting from scratch, I've written a compact guide on how to set up react-intl in your Next.js application.
 

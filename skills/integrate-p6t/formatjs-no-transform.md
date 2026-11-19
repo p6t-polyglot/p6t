@@ -10,7 +10,6 @@ Copy bundled [generate-ids.mjs](scripts/generate-ids.mjs) into the owning packag
 {
   "scripts": {
     "i18n:extract": "formatjs extract 'src/**/*.{ts,tsx}' --ignore='**/*.d.ts' --out-file i18n/en.json --id-interpolation-pattern '[sha512:contenthash:base64:6]' --extract-source-location --preserve-whitespace --throws && node scripts/generate-ids.mjs i18n/en.json i18n/generated/ids.json",
-    "i18n:translate": "p6t translate",
     "i18n:compile": "formatjs compile-folder i18n i18n/compiled --ast"
   }
 }
