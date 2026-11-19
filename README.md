@@ -1,6 +1,6 @@
 # p6t (polyglot)
 
-p6t is a CLI that generates native-quality translations for React apps. Uses your own LLM API key and works with **react-intl** (default) and **Lingui** (experimental).
+p6t keeps translation catalogs up to date for React apps. Use your coding agent through MCP for **react-intl**, or run the CLI with your own LLM provider for **react-intl** or **Lingui** (experimental).
 
 ## Getting started
 
@@ -19,6 +19,39 @@ pnpm p6t init
 # 3. Run your first translation
 pnpm p6t translate
 ```
+
+## Use your coding agent through MCP
+
+Register a local **stdio** MCP server in your agent host. For a project with `@p6t/cli` installed, launch:
+
+```sh
+pnpm --dir /absolute/path/to/project exec p6t mcp
+```
+
+For a new project, ask the agent to **“Set up p6t for English and German.”** `inspect_project` looks for existing configuration and catalogs; `init_project` scaffolds configuration and context files after you agree on the locales and paths. It won’t overwrite existing context.
+
+The resulting `i18n.json` needs no `provider` or separate p6t model key:
+
+```json
+{
+  "$schema": "https://p6t.dev/schema/i18n.json",
+  "version": 1,
+  "format": "react-intl",
+  "locale": { "source": "en", "targets": ["de"] },
+  "catalogs": [{ "path": "i18n/{locale}.json" }]
+}
+```
+
+Ask your agent: **“Refresh the source catalog and bring German up to date with p6t.”**
+
+```text
+Refresh source catalog → prepare_locale (read only) → agent translates
+    → apply_locale (validate, write, prune) → review the Git diff
+```
+
+The agent uses its existing model. p6t still prunes obsolete keys when there’s nothing to translate. If a catalog changes after preparation, the agent needs a fresh plan. For a review without edits, ask the agent to report the plan only.
+
+No skill is required. The server explains when to use the workflow and what makes a useful glossary proposal. Suggestions stay in the review until you approve a specific entry; the agent can then edit the locale glossary separately. Put shared project rules in `translationInstructions` or the locale style guides.
 
 ## Agent skills
 
@@ -47,7 +80,7 @@ Restart your agent if it does not pick up the new skills. To apply translatabili
 
 ## How it works
 
-p6t sends your missing translations directly to your LLM provider of choice (OpenAI, Gemini, etc.) and writes native-quality translation results back. It does this by first scaffolding a setup that includes a style guide of your brand voice, which you have full control over to customize it as your product matures, and then grouping related translations, so that closely related translations have an inner coherence.
+With `p6t translate`, p6t sends missing messages directly to your configured LLM provider. With `p6t mcp`, your coding agent drafts the translations. Both paths use the project's locale context, including its glossary and style guide.
 
 For the result to sound really good, p6t requires context on your source strings, including the source file and a description of the translation that captures the intent of the element. If you're starting from scratch, I've written a compact guide on how to set up react-intl in your Next.js application.
 

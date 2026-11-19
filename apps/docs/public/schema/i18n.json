@@ -46,6 +46,7 @@
       "additionalProperties": false
     },
     "provider": {
+      "description": "LLM provider for direct CLI translation. Not needed for MCP. API keys are read from environment variables, never from this file.",
       "type": "object",
       "properties": {
         "id": {
@@ -77,8 +78,11 @@
         "id",
         "model"
       ],
-      "description": "LLM provider used for translation. API keys are read from environment variables, never from this file.",
       "additionalProperties": false
+    },
+    "translationInstructions": {
+      "description": "Project-specific translation instructions used by both the agent and direct CLI translation.",
+      "type": "string"
     },
     "context": {
       "default": {
@@ -131,8 +135,7 @@
   },
   "required": [
     "version",
-    "locale",
-    "provider"
+    "locale"
   ],
   "additionalProperties": false
 }

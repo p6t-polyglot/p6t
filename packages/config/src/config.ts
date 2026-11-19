@@ -87,8 +87,11 @@ export const ConfigSchema = z.object({
   locale: LocaleSchema.describe(
     "Source and target locales for the translation pipeline.",
   ),
-  provider: ProviderSchema.describe(
-    "LLM provider used for translation. API keys are read from environment variables, never from this file.",
+  provider: ProviderSchema.optional().describe(
+    "LLM provider for direct CLI translation. Not needed for MCP. API keys are read from environment variables, never from this file.",
+  ),
+  translationInstructions: z.string().optional().describe(
+    "Project-specific translation instructions used by both the agent and direct CLI translation.",
   ),
   context: ContextSchema.default({
     description: "i18n/description.md",

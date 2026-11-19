@@ -5,7 +5,8 @@ import { defineCommand } from "citty";
 import { generateText } from "ai";
 import { createModel, ProviderError } from "../llm/providers.ts";
 import { createAdapter } from "../catalog/adapter.ts";
-import type { Config } from "@p6t/config";
+import { writeContextStubs, writeProjectConfig } from "../config/scaffold.ts";
+import type { Config, ProviderId } from "@p6t/config";
 
 const CONFIG_FILE = "i18n.json";
 
@@ -344,7 +345,7 @@ export const initCommand = defineCommand({
       .map((l) => l.trim())
       .filter(Boolean);
 
-    const providerId = answers.providerId as Config["provider"]["id"];
+    const providerId = answers.providerId as ProviderId;
     const model = answers.model as string;
     const sourceLocale = answers.sourceLocale as string;
     const format = answers.format as Config["format"];
@@ -358,6 +359,9 @@ export const initCommand = defineCommand({
       format,
       locale: { source: sourceLocale, targets: targetLocales },
       provider: { id: providerId, model },
+      ...(existing?.translationInstructions !== undefined && {
+        translationInstructions: existing.translationInstructions,
+      }),
       context: {
         description: "i18n/description.md",
         styleGuide: "i18n/{locale}/style-guide.md",
@@ -369,14 +373,7 @@ export const initCommand = defineCommand({
       config.catalogs = [{ path: catalogPath }];
     }
 
-    writeFileSafe(
-      path.join(cwd, CONFIG_FILE),
-      JSON.stringify(
-        { $schema: "https://p6t.dev/schema/i18n.json", ...config },
-        null,
-        2,
-      ) + "\n",
-    );
+    writeProjectConfig(cwd, config);
     p.log.success(`Created ${CONFIG_FILE}`);
 
     // ── Set up adapter ───────────────────────────────────────────────────────
@@ -388,7 +385,7 @@ export const initCommand = defineCommand({
       p.log.warn(
         `Could not load catalog adapter (${err instanceof Error ? err.message : String(err)}) — skipping LLM drafting.`,
       );
-      writeContextStubs(cwd, config, targetLocales);
+      for (const file of writeContextStubs(cwd, config)) p.log.success(`Created ${file}`);
       p.outro("Done (stubs created)");
       return;
     }
@@ -404,7 +401,7 @@ export const initCommand = defineCommand({
           p.log.warn(
             `${err.message} — skipping LLM drafting. Edit context files manually.`,
           );
-          writeContextStubs(cwd, config, targetLocales);
+          for (const file of writeContextStubs(cwd, config)) p.log.success(`Created ${file}`);
           p.outro("Done (stubs created)");
           return;
         }
@@ -439,7 +436,7 @@ export const initCommand = defineCommand({
         p.log.warn(
           `LLM description drafting failed (${err instanceof Error ? err.message : String(err)}) — writing stubs.`,
         );
-        writeContextStubs(cwd, config, targetLocales);
+        for (const file of writeContextStubs(cwd, config)) p.log.success(`Created ${file}`);
         p.outro("Done (stubs created)");
         return;
       }
@@ -530,7 +527,7 @@ export const initCommand = defineCommand({
         }
       }
     } else {
-      writeContextStubs(cwd, config, targetLocales);
+      for (const file of writeContextStubs(cwd, config)) p.log.success(`Created ${file}`);
     }
 
     p.note(
@@ -547,67 +544,3 @@ export const initCommand = defineCommand({
     p.outro("Done — run `p6t translate` when ready");
   },
 });
-
-// ---------------------------------------------------------------------------
-// Stub writer (when skipping LLM)
-// ---------------------------------------------------------------------------
-
-function writeContextStubs(
-  cwd: string,
-  config: Config,
-  targetLocales: string[],
-): void {
-  const descPath = path.join(cwd, config.context.description);
-  if (!fs.existsSync(descPath)) {
-    writeFileSafe(
-      descPath,
-      [
-        "# Project description",
-        "",
-        "Describe your project here for translators:",
-        "- What does it do?",
-        "- Who are the users?",
-        "- What industry/domain?",
-        "- Any important vocabulary notes?",
-      ].join("\n") + "\n",
-    );
-    p.log.success(`Created ${config.context.description}`);
-  }
-
-  for (const locale of targetLocales) {
-    const styleGuidePath = resolveContextPath(
-      config.context.styleGuide,
-      locale,
-      cwd,
-    );
-    const glossaryPath = resolveContextPath(
-      config.context.glossary,
-      locale,
-      cwd,
-    );
-
-    if (!fs.existsSync(styleGuidePath)) {
-      writeFileSafe(
-        styleGuidePath,
-        [
-          `# Style guide — ${locale}`,
-          "",
-          "## Tone and formality",
-          "<!-- Formal or informal? -->",
-          "",
-          "## Brand voice",
-          "<!-- How should the brand sound? -->",
-          "",
-          "## Punctuation and formatting",
-          "<!-- Any locale-specific rules? -->",
-        ].join("\n") + "\n",
-      );
-    }
-
-    if (!fs.existsSync(glossaryPath)) {
-      writeFileSafe(glossaryPath, "{}\n");
-    }
-
-    p.log.success(`Created context files for ${locale}`);
-  }
-}

@@ -33,6 +33,7 @@ function buildSystemPrompt(
   ctx: TranslationContext,
   orphans: OrphanedTranslation[],
   customPrompt?: string,
+  translationInstructions?: string,
 ): string {
   const sections: string[] = []
 
@@ -42,6 +43,10 @@ function buildSystemPrompt(
     sections.push(
       `You are a professional translator. Translate from ${sourceLocale} to ${targetLocale}.`,
     )
+  }
+
+  if (translationInstructions?.trim()) {
+    sections.push(`## Project translation instructions\n${translationInstructions.trim()}`)
   }
 
   if (ctx.description) {
@@ -113,6 +118,7 @@ export class DefaultTranslator implements Translator {
     private readonly customPrompt?: string,
     private readonly batchSize = DEFAULT_BATCH_SIZE,
     private readonly maxOrphans = DEFAULT_MAX_ORPHANS,
+    private readonly translationInstructions?: string,
   ) {}
 
   async translate(
@@ -134,6 +140,7 @@ export class DefaultTranslator implements Translator {
       ctx,
       trimmedOrphans,
       this.customPrompt,
+      this.translationInstructions,
     )
     const results: TranslationResult[] = []
     const missing: { id: string; source: string }[] = []
