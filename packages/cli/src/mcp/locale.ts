@@ -59,12 +59,20 @@ function inspectLocale(cwd: string, locale: string) {
 
 export function prepareLocale(cwd: string, locale: string) {
   const plan = inspectLocale(cwd, locale);
+  const pending = plan.files.reduce((n, file) => n + file.groups.reduce((m, g) => m + g.units.length, 0), 0);
+  const obsolete = plan.files.reduce((n, file) => n + file.stale.length, 0);
+  const next = pending > 0
+    ? "For a review, report the plan without writing. For an authorized update, draft the pending translations and call apply_locale with this revision."
+    : obsolete > 0
+      ? 'For a review, report the obsolete keys without writing. For an authorized update, call apply_locale with this revision and "translations": [] to prune them.'
+      : "This locale is up to date. No update is needed.";
   return {
     locale,
     sourceLocale: plan.sourceLocale,
     revision: plan.revision,
-    pending: plan.files.reduce((n, file) => n + file.groups.reduce((m, g) => m + g.units.length, 0), 0),
-    obsolete: plan.files.reduce((n, file) => n + file.stale.length, 0),
+    pending,
+    obsolete,
+    next,
     context: plan.context,
     translationInstructions: plan.translationInstructions,
     glossaryPath: plan.glossaryPath,
@@ -110,7 +118,7 @@ export function applyLocale(
 ) {
   const plan = inspectLocale(cwd, locale);
   if (revision !== plan.revision) {
-    throw new Error("Locale inputs changed after preparation. Call prepare_locale again before applying.");
+    throw new Error(`Locale inputs changed after preparation. Call prepare_locale again for ${locale} and check the new plan before applying.`);
   }
   const pending = new Map(plan.files.map((file) => [
     file.catalog, new Map(file.groups.flatMap(({ units }) => units.map((unit) => [unit.id, unit]))),

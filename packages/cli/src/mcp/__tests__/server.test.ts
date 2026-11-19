@@ -50,13 +50,18 @@ it("prepares without writing and applies a prune-only update without a provider"
   });
   const before = read("de.json");
   const plan = await prepare();
-  expect(plan).toMatchObject({ pending: 0, obsolete: 3 });
+  expect(plan).toMatchObject({
+    pending: 0,
+    obsolete: 3,
+    next: expect.stringMatching(/apply_locale.*"translations": \[\]/),
+  });
   expect(read("de.json")).toBe(before);
 
   const result = await apply(plan.revision);
   expect(result.isError).not.toBe(true);
   expect(result.structuredContent).toMatchObject({ translated: 0, pruned: 3, remaining: 0 });
   expect(JSON.parse(read("de.json"))).toEqual({ keep: { defaultMessage: "Behalten" } });
+  expect(await prepare()).toMatchObject({ next: "This locale is up to date. No update is needed." });
 });
 
 it("prepares checkout copy and context, rejects broken ICU, then writes a reviewed diff", async () => {
@@ -73,6 +78,7 @@ it("prepares checkout copy and context, rejects broken ICU, then writes a review
   const before = read("de.json");
   const plan = await prepare();
   expect(plan).toMatchObject({
+    next: expect.stringMatching(/draft the pending translations.*apply_locale/),
     context: { glossary: { Workspace: "Arbeitsbereich" } },
     catalogs: [{
       catalog: "de.json",
@@ -105,7 +111,11 @@ it("rejects a plan if an obsolete key was restored to the source catalog", async
   const plan = await prepare();
   const before = read("de.json");
   put("en.json", { banner: { defaultMessage: "Welcome" } });
-  expect((await apply(plan.revision)).isError).toBe(true);
+  const result = await apply(plan.revision);
+  expect(result.isError).toBe(true);
+  expect(result.content).toEqual([
+    expect.objectContaining({ text: expect.stringContaining("Call prepare_locale again for de") }),
+  ]);
   expect(read("de.json")).toBe(before);
 });
 

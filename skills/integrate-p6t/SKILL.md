@@ -57,7 +57,7 @@ Get extraction and compilation working before adding AI translation. Include an 
 ## 5. Verify and hand off
 
 - [ ] Run a complete, successful extraction covering the relevant application/shared code. Inspect the source catalog before translation: stale-entry removal must not run against empty or incomplete extraction output.
-- [ ] For MCP, call `prepare_locale`, draft translations, then call `apply_locale` for an authorized update, including prune-only plans. For the CLI fallback, translate only with the approved provider. Review target terminology and catalog diffs before compiling.
+- [ ] For MCP, call `prepare_locale` and follow its next step. For the CLI fallback, translate only with the approved provider. Review target terminology and catalog diffs before compiling.
 - [ ] Check preserved human translations, intentional stale removals, ICU syntax, placeholders, generated-ID map coverage where used, and required-message coverage. Compile reviewed catalogs.
 - [ ] Run the repo's build/typecheck/lint/tests as applicable. Check the translated experience, fallback, accessibility, long text, plural boundaries, language switching, and persistence.
 - [ ] For SSR, check locale isolation and hydration. For mixed routes, check that public redirects never hijack private/auth/API/asset paths.

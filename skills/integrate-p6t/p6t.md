@@ -172,7 +172,7 @@ For German, explicitly review noun compounding and domain terminology: a plan's 
 
 With either route, run a complete extraction first. Inspect its output before any update that can prune. After translation, review the Git diff, check coverage, and compile.
 
-**MCP (recommended):** call `prepare_locale` for the target locale. For a review, report the plan and stop. For an update, draft the pending translations and call `apply_locale` with the current revision, even if there are only obsolete keys. Re-prepare after a stale revision error.
+**MCP (recommended):** call `prepare_locale` for the target locale. Its response tells you what to do next for a review or an update.
 
 **Direct CLI fallback:**
 

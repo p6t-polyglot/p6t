@@ -31,7 +31,7 @@ Refresh source catalog → prepare_locale (read only) → agent translates
     → apply_locale (validate, write, prune) → review the Git diff
 ```
 
-The agent uses its existing model. p6t still prunes obsolete keys when there’s nothing to translate. If a catalog changes after preparation, the agent needs a fresh plan. For a review without edits, ask the agent to report the plan only.
+The agent uses its existing model. p6t still prunes obsolete keys when there’s nothing to translate. For a review without edits, ask the agent to report the plan only.
 
 No skill is required. Ask the agent to use `inspect_project` when drafting or reviewing the project brief and locale guides. It returns a recipe for grounding the brief in product evidence and writing rules that change real translation decisions. Glossary suggestions stay in review until you approve a specific entry.
 

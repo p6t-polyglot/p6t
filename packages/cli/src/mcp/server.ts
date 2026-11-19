@@ -27,9 +27,7 @@ export function createP6tMcpServer(cwd: string) {
       "Use the p6t MCP tools instead of shelling out to p6t commands. " +
       "For initial setup, call inspect_project, agree on locales and catalog paths with the user, then call init_project. " +
       "When drafting or reviewing the project brief or locale guides, use the drafting recipe in inspect_project. " +
-      `${PREPARE_DESCRIPTION} For a review, report the plan without writing. ` +
-      "For an update, translate the pending messages yourself, then call apply_locale with the plan revision. " +
-      "Apply even if there are only obsolete keys: pass an empty translations array to prune them. " +
+      `${PREPARE_DESCRIPTION} Follow the next step in the plan returned by prepare_locale. ` +
       "Report what was translated and pruned, what remains, and any glossary candidates for separate reviewer approval.",
   });
 
@@ -95,14 +93,13 @@ export function createP6tMcpServer(cwd: string) {
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, ({ locale }) => result(
     locale === undefined
-      ? { locales: loadConfig(cwd).locale }
+      ? { locales: loadConfig(cwd).locale, next: "Call prepare_locale with the target locale you want to review or update." }
       : prepareLocale(cwd, locale),
   ));
 
   server.registerTool("apply_locale", {
     description:
-      "For an authorized locale update, validate and write pending translations and prune all obsolete IDs in the prepared plan. " +
-      "Use an empty translations array for pruning alone. Does not edit the glossary.",
+      "For an authorized locale update, validate and write pending translations and prune all obsolete IDs in the prepared plan. Does not edit the glossary.",
     inputSchema: {
       locale: z.string().min(1),
       revision: z.string().describe("Revision returned by prepare_locale."),
