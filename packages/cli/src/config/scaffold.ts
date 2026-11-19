@@ -27,28 +27,21 @@ export function writeContextStubs(cwd: string, config: Config) {
   create(config.context.description, config.locale.source, [
     "# Project description",
     "",
-    "Describe your project here for translators:",
-    "- What does it do?",
-    "- Who are the users?",
-    "- What industry/domain?",
-    "- Any important vocabulary notes?",
+    "<!-- Name the users, their jobs, and product concepts that change the meaning of UI copy. -->",
     "",
   ].join("\n"));
   for (const locale of config.locale.targets) {
-    create(config.context.styleGuide, locale, [
-      `# Style guide — ${locale}`,
-      "",
-      "## Tone and formality",
-      "<!-- Formal or informal? -->",
-      "",
-      "## Brand voice",
-      "<!-- How should the brand sound? -->",
-      "",
-      "## Punctuation and formatting",
-      "<!-- Any locale-specific rules? -->",
-      "",
-    ].join("\n"));
+    create(config.context.styleGuide, locale, styleGuideStub(locale));
     create(config.context.glossary, locale, "{}\n");
   }
   return created;
+}
+
+export function styleGuideStub(locale: string) {
+  return [
+    `# Style guide — ${locale}`,
+    "",
+    "<!-- Record only choices that change the translation. For each, write when it applies, what to use, and an example. -->",
+    "",
+  ].join("\n");
 }

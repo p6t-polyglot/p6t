@@ -5,6 +5,7 @@ import { ConfigSchema } from "@p6t/config";
 import { createReactIntlAdapter } from "../catalog/react-intl.ts";
 import { findConfigFile, loadConfig } from "../config/loader.ts";
 import { writeContextStubs, writeProjectConfig } from "../config/scaffold.ts";
+import { DRAFTING_GUIDE } from "../context/drafting.ts";
 import { applyLocale, prepareLocale } from "./locale.ts";
 
 const PREPARE_DESCRIPTION =
@@ -25,6 +26,7 @@ export function createP6tMcpServer(cwd: string) {
     instructions:
       "Use the p6t MCP tools instead of shelling out to p6t commands. " +
       "For initial setup, call inspect_project, agree on locales and catalog paths with the user, then call init_project. " +
+      "When drafting or reviewing the project brief or locale guides, use the drafting recipe in inspect_project. " +
       `${PREPARE_DESCRIPTION} For a review, report the plan without writing. ` +
       "For an update, translate the pending messages yourself, then call apply_locale with the plan revision. " +
       "Apply even if there are only obsolete keys: pass an empty translations array to prune them. " +
@@ -39,7 +41,7 @@ export function createP6tMcpServer(cwd: string) {
     };
   }
   server.registerTool("inspect_project", {
-    description: "Find existing p6t configuration and candidate react-intl catalog files before proposing setup. Read-only.",
+    description: "Find p6t configuration and candidate react-intl catalogs before setup. Also returns the drafting recipe for writing or reviewing the project brief and locale style guides. Read-only.",
     inputSchema: {},
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, () => {
@@ -47,6 +49,7 @@ export function createP6tMcpServer(cwd: string) {
     const adapter = createReactIntlAdapter(cwd, [{ path: "i18n/{locale}.json" }]);
     return result({
       configFile,
+      draftingGuide: DRAFTING_GUIDE,
       catalogCandidates: adapter.discoverCatalogs(cwd)
         .filter((file) => path.basename(file) !== "glossary.json" &&
           adapter.extractSourceStrings(file).some((message) => typeof message === "string" && message.trim()))
@@ -80,7 +83,10 @@ export function createP6tMcpServer(cwd: string) {
     });
     writeProjectConfig(cwd, config, true);
     const created = ["i18n.json", ...writeContextStubs(cwd, config)];
-    return result({ created, next: "Refresh your source catalogs with the project's extraction command, then call prepare_locale." });
+    return result({
+      created,
+      next: "Draft and review the translation context using inspect_project's drafting guide. Then refresh your source catalogs with the project's extraction command and call prepare_locale.",
+    });
   });
 
   server.registerTool("prepare_locale", {

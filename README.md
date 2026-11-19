@@ -2,27 +2,9 @@
 
 p6t keeps translation catalogs up to date for React apps. Use your coding agent through MCP for **react-intl**, or run the CLI with your own LLM provider for **react-intl** or **Lingui** (experimental).
 
-## Getting started
+## Getting started with MCP (recommended for react-intl)
 
-```sh
-# Make sure the API key for the generative AI provider of your choice 
-# is available in .env or provide it explicitly in the terminal. e.g.
-# export GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
-
-
-# 1. Install as a dev dependency
-pnpm add -D @p6t/cli
-
-# 2. Initialize the config
-pnpm p6t init
-
-# 3. Run your first translation
-pnpm p6t translate
-```
-
-## Use your coding agent through MCP
-
-Register a local **stdio** MCP server in your agent host. For a project with `@p6t/cli` installed, launch:
+Install `@p6t/cli` as a dev dependency with `pnpm add -D @p6t/cli`. Register this local **stdio** command in your agent host:
 
 ```sh
 pnpm --dir /absolute/path/to/project exec p6t mcp
@@ -51,7 +33,11 @@ Refresh source catalog → prepare_locale (read only) → agent translates
 
 The agent uses its existing model. p6t still prunes obsolete keys when there’s nothing to translate. If a catalog changes after preparation, the agent needs a fresh plan. For a review without edits, ask the agent to report the plan only.
 
-No skill is required. The server explains when to use the workflow and what makes a useful glossary proposal. Suggestions stay in the review until you approve a specific entry; the agent can then edit the locale glossary separately. Put shared project rules in `translationInstructions` or the locale style guides.
+No skill is required. Ask the agent to use `inspect_project` when drafting or reviewing the project brief and locale guides. It returns a recipe for grounding the brief in product evidence and writing rules that change real translation decisions. Glossary suggestions stay in review until you approve a specific entry.
+
+## Direct CLI
+
+For unattended translation or Lingui, run `pnpm exec p6t init`, configure your provider credentials outside version control, then run `pnpm exec p6t translate`.
 
 ## Agent skills
 

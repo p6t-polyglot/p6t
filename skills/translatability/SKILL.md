@@ -51,7 +51,7 @@ If no i18n infrastructure exists, agree on a setup before introducing translatio
 
 - Give every message a statically extractable description/comment: placement, user goal, effect, stakes, and any ambiguous terminology or placeholders.
 - Describe what the copy does, not just where it sits: a label names an action, an instruction addresses the user, and a status reports a state. “Opens a confirmation dialog; does not delete immediately” is more useful than “Button text.” Check register against the locale's style guide by role; if the guide causes the problem, resolve the guidance before applying it to more strings.
-- Write descriptions before translation and correct them when intent changes. With content-hashed FormatJS IDs, a description edit can generate a new ID; use the repo's normal catalog update workflow rather than keeping stale context to preserve an ID. With p6t, re-extract, use `p6t translate` for missing translations, review the catalog diff, and recompile.
+- Write descriptions before translation and correct them when intent changes. With content-hashed FormatJS IDs, a description edit can generate a new ID; use the repo's normal catalog update workflow rather than keeping stale context to preserve an ID. With p6t, re-extract, update the locale through MCP when available, review the catalog diff, and recompile.
 - Product briefs, per-locale voice guides, and glossaries supplement message-level intent; they do not replace it.
 
 ### Translate complete messages

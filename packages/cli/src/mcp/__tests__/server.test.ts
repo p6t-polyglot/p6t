@@ -125,6 +125,14 @@ it("inspects an unconfigured project and scaffolds without overwriting existing 
 
   const inspection = await client.callTool({ name: "inspect_project", arguments: {} });
   expect(inspection.structuredContent).toMatchObject({ configFile: null, catalogCandidates: ["i18n/en.json"] });
+  expect(inspection.structuredContent).toMatchObject({
+    draftingGuide: {
+      inspect: expect.stringContaining("representative screens"),
+      description: expect.stringContaining("jobs they do"),
+      styleGuide: expect.stringContaining("a trigger, a preferred choice, and a real or representative target-language example"),
+      review: expect.stringContaining("leave the choice out of the guide until settled"),
+    },
+  });
   expect(fs.existsSync(path.join(dir, "i18n.json"))).toBe(false);
 
   const args = { sourceLocale: "en", targetLocales: ["de"], catalogTemplates: ["i18n/{locale}.json"] };
@@ -136,7 +144,9 @@ it("inspects an unconfigured project and scaffolds without overwriting existing 
   const config = JSON.parse(read("i18n.json"));
   expect(config).not.toHaveProperty("provider");
   expect(JSON.parse(read("i18n/de/glossary.json"))).toEqual({ Workspace: "Arbeitsbereich" });
-  expect(await prepare()).toMatchObject({ pending: 1 });
+  const locale = await prepare();
+  expect(locale).toMatchObject({ pending: 1 });
+  expect(locale).not.toHaveProperty("draftingGuide");
 
   const repeat = await client.callTool({ name: "init_project", arguments: { ...args, targetLocales: ["fr"] } });
   expect(repeat.isError).toBe(true);

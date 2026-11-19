@@ -76,8 +76,7 @@ Add or adapt scripts:
 {
   "scripts": {
     "i18n:extract": "formatjs extract 'src/**/*.{ts,tsx}' --ignore='**/*.d.ts' --out-file i18n/en.json --id-interpolation-pattern '[sha512:contenthash:base64:6]' --extract-source-location --throws",
-    "i18n:compile": "formatjs compile-folder i18n i18n/compiled --ast",
-    "i18n:translate": "p6t translate"
+    "i18n:compile": "formatjs compile-folder i18n i18n/compiled --ast"
   }
 }
 ```

@@ -5,7 +5,8 @@ import { defineCommand } from "citty";
 import { generateText } from "ai";
 import { createModel, ProviderError } from "../llm/providers.ts";
 import { createAdapter } from "../catalog/adapter.ts";
-import { writeContextStubs, writeProjectConfig } from "../config/scaffold.ts";
+import { styleGuideStub, writeContextStubs, writeProjectConfig } from "../config/scaffold.ts";
+import { DESCRIPTION_GUIDANCE, STYLE_GUIDE_GUIDANCE } from "../context/drafting.ts";
 import type { Config, ProviderId } from "@p6t/config";
 
 const CONFIG_FILE = "i18n.json";
@@ -119,9 +120,8 @@ async function draftDescription(
 ): Promise<string> {
   const sample = sourceStrings.join("\n");
   const prompt = [
-    "Write a concise project description (2-4 paragraphs) for a professional translator.",
-    "It should explain: what this product is, who uses it, its domain/industry, and any important vocabulary notes.",
-    "Base it on the README and sample UI strings below.",
+    DESCRIPTION_GUIDANCE,
+    "Use only facts supported by the README and sample UI strings below.",
     readme ? `\n## README\n${readme.slice(0, 100_000)}` : "",
     sample ? `\n## Sample UI strings\n${sample}` : "",
   ]
@@ -145,7 +145,7 @@ async function draftStyleGuide(
 ): Promise<string> {
   const examplesSection =
     translatedPairs.length > 0
-      ? `\n## Existing translations (observe the established style)\n${translatedPairs
+      ? `\n## Existing translations (review status unknown)\n${translatedPairs
           .map(
             ({ source, translation }) =>
               `source: ${source}\ntranslation: ${translation}`,
@@ -159,9 +159,9 @@ async function draftStyleGuide(
       "You are a localization expert. Write a translation style guide in markdown.",
     prompt: [
       `Write a style guide for translating into ${locale}.`,
-      "Cover: formality level (formal/informal), tone, brand voice, punctuation conventions, number/date formats, and any locale-specific considerations.",
-      "Keep it practical — 1-2 sentences per rule. Use markdown headings.",
-      "If existing translations are provided, infer the style from them rather than guessing.",
+      STYLE_GUIDE_GUIDANCE,
+      "Treat these samples as clues, not approval. Use a preference only where it is consistently evidenced.",
+      "Leave consequential decisions out if the samples don't settle them. If there are no supported rules, return only a style guide heading.",
       `\n## Project context\n${projectDescription}`,
       examplesSection,
     ]
@@ -426,12 +426,15 @@ export const initCommand = defineCommand({
       spinner.start("Drafting project description…");
       let description: string;
       try {
-        description = await draftDescription(readme, sourceStrings, llmModel);
-        writeFileSafe(
-          path.join(cwd, config.context.description),
-          description + "\n",
-        );
-        spinner.stop(`Created ${config.context.description}`);
+        const descriptionPath = path.join(cwd, config.context.description);
+        if (fs.existsSync(descriptionPath)) {
+          description = fs.readFileSync(descriptionPath, "utf8");
+          spinner.stop(`Kept ${config.context.description}`);
+        } else {
+          description = await draftDescription(readme, sourceStrings, llmModel);
+          writeFileSafe(descriptionPath, description + "\n");
+          spinner.stop(`Created ${config.context.description}`);
+        }
       } catch (err) {
         p.log.warn(
           `LLM description drafting failed (${err instanceof Error ? err.message : String(err)}) — writing stubs.`,
@@ -443,6 +446,11 @@ export const initCommand = defineCommand({
 
       // Draft per-locale style guides and glossaries
       for (const locale of targetLocales) {
+        const styleGuidePath = resolveContextPath(config.context.styleGuide, locale, cwd);
+        const glossaryPath = resolveContextPath(config.context.glossary, locale, cwd);
+        const hasStyleGuide = fs.existsSync(styleGuidePath);
+        const hasGlossary = fs.existsSync(glossaryPath);
+        if (hasStyleGuide && hasGlossary) continue;
         spinner.start(`Drafting style guide + glossary for ${locale}…`);
 
         const targetCatalogs = adapter.getCatalogPathsForLocale(locale);
@@ -459,66 +467,21 @@ export const initCommand = defineCommand({
         }
 
         try {
-          const styleGuide = await draftStyleGuide(
-            locale,
-            description,
-            translatedPairs,
-            llmModel,
-          );
-          const glossary = await draftGlossary(
-            locale,
-            sourceStrings,
-            description,
-            translatedPairs,
-            styleGuide,
-            llmModel,
-          );
-
-          const styleGuidePath = resolveContextPath(
-            config.context.styleGuide,
-            locale,
-            cwd,
-          );
-          const glossaryPath = resolveContextPath(
-            config.context.glossary,
-            locale,
-            cwd,
-          );
-
-          writeFileSafe(styleGuidePath, styleGuide + "\n");
-          writeFileSafe(glossaryPath, JSON.stringify(glossary, null, 2) + "\n");
+          const styleGuide = hasStyleGuide ? fs.readFileSync(styleGuidePath, "utf8")
+            : await draftStyleGuide(locale, description, translatedPairs, llmModel);
+          if (!hasStyleGuide) writeFileSafe(styleGuidePath, styleGuide + "\n");
+          if (!hasGlossary) {
+            const glossary = await draftGlossary(locale, sourceStrings, description, translatedPairs, styleGuide, llmModel);
+            writeFileSafe(glossaryPath, JSON.stringify(glossary, null, 2) + "\n");
+          }
 
           spinner.stop(`Created context files for ${locale}`);
         } catch (err) {
           p.log.warn(
             `LLM drafting failed for ${locale} (${err instanceof Error ? err.message : String(err)}) — writing stubs.`,
           );
-          const styleGuidePath = resolveContextPath(
-            config.context.styleGuide,
-            locale,
-            cwd,
-          );
-          const glossaryPath = resolveContextPath(
-            config.context.glossary,
-            locale,
-            cwd,
-          );
           if (!fs.existsSync(styleGuidePath)) {
-            writeFileSafe(
-              styleGuidePath,
-              [
-                `# Style guide — ${locale}`,
-                "",
-                "## Tone and formality",
-                "<!-- Formal or informal? -->",
-                "",
-                "## Brand voice",
-                "<!-- How should the brand sound? -->",
-                "",
-                "## Punctuation and formatting",
-                "<!-- Any locale-specific rules? -->",
-              ].join("\n") + "\n",
-            );
+            writeFileSafe(styleGuidePath, styleGuideStub(locale));
           }
           if (!fs.existsSync(glossaryPath)) {
             writeFileSafe(glossaryPath, "{}\n");
