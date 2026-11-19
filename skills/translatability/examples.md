@@ -78,6 +78,12 @@ Give each its own intent. With react-intl, distinct descriptions participate in 
 
 Do not force both into `common.open`, or change wording merely to manipulate generated IDs.
 
+## Fixed choices need complete messages
+
+`Select {recipe} for {slot}` looks complete, but if `{slot}` is a translated badge label, it can render as “Select Lentil Soup for treat.” In German, the same preposition may need different articles or contractions for *Mittagessen* and *Snack*. A glossary can tell translators which nouns to use, but it cannot give a template control over how an interpolated label inflects.
+
+Use the stable slot value to choose a complete message: `Select {recipe} for lunch`, `Select {recipe} for dinner`, or `Select {recipe} for a treat`. Describe `{recipe}` as the recipe's display name and explain what selecting it does. Keep the standalone slot label for the badge. Render all three variants in both locales, including any screen-reader wording.
+
 ## Complete messages and plurals
 
 Avoid `count + ' ' + t('item') + ' ' + t('inCart')`. Even translating the noun separately cannot express language-specific word order and inflection.

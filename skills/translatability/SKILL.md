@@ -1,6 +1,6 @@
 ---
 name: translatability
-description: Guides source-first, translator-friendly UI and generated-artifact development and review. Use when changing user-facing text, separating document language from viewer chrome, reviewing localization, or sharing messages through code rather than hand-written translation keys. Applies with or without React or p6t.
+description: Translatability for UI and generated artifacts. Use when building or changing UI with user-facing text, diagnosing awkward translations, reviewing message composition, or separating artifact language from viewer chrome.
 ---
 
 # Translatability
@@ -23,7 +23,7 @@ Use the project's i18n library and extraction conventions. This skill does not r
 ## Workflow
 
 1. Inspect the repo instructions, i18n configuration, representative components, and scripts until the library, message conventions, and extraction/build path are identified.
-2. Establish the changed surface's user goal, message placement, action consequences, and language owner (artifact, viewer, or model-facing). Ask about intent that the code does not establish.
+2. Establish the user's goal, message placement, action consequences, and language owner (artifact, viewer, or model-facing). For a wording report, trace the rendered text back to its source message, placeholder values, and locale guidance before proposing a fix. Ask about intent that the code does not establish.
 3. Apply the principles below to every changed user-facing surface, including loading, empty, error, and accessible states.
 4. Complete the verification checklist; report any blocked checks explicitly.
 
@@ -50,15 +50,17 @@ If no i18n infrastructure exists, agree on a setup before introducing translatio
 ### Capture intent at write-time
 
 - Give every message a statically extractable description/comment: placement, user goal, effect, stakes, and any ambiguous terminology or placeholders.
-- “Button text” or a paraphrase of the source is not useful context. “Opens a confirmation dialog; does not delete immediately” is.
-- Keep descriptions accurate when behavior changes. Product briefs, per-locale voice guides, and glossaries supplement message-level intent; they do not replace it.
+- Describe what the copy does, not just where it sits: a label names an action, an instruction addresses the user, and a status reports a state. “Opens a confirmation dialog; does not delete immediately” is more useful than “Button text.” Check register against the locale's style guide by role; if the guide causes the problem, resolve the guidance before applying it to more strings.
+- Write descriptions before translation and correct them when intent changes. With content-hashed FormatJS IDs, a description edit can generate a new ID; use the repo's normal catalog update workflow rather than keeping stale context to preserve an ID. With p6t, re-extract, use `p6t translate` for missing translations, review the catalog diff, and recompile.
+- Product briefs, per-locale voice guides, and glossaries supplement message-level intent; they do not replace it.
 
 ### Translate complete messages
 
 - Use a complete grammatical unit, including punctuation. A short button label can be a complete message; fragments of a sentence are not.
-- Never concatenate translated fragments, append English suffixes, or assemble dynamic translation keys. Let translators reorder meaningful placeholders and rich-text elements.
+- Keep grammar inside the message. A translated label used as an ICU value is still a fragment if the surrounding phrase needs to agree with it (article, gender, case, or number). Pass data such as display names as placeholders; keep product-authored wording inside the message. Let translators reorder placeholders and rich-text elements.
+- For a small fixed set of choices, prefer one complete message per choice when the choice changes the wording. Choose among static descriptors or use ICU `select` with a stable untranslated value, complete branches, and an `other` fallback. Reuse standalone labels where they stand alone.
 - Use ICU plurals/selects or the library equivalent, with an `other` fallback. Do not model all languages with `count === 1`, or assume that the plural category `zero` means exactly zero.
-- Keep source text static for extraction. Pass data as named placeholders; explain what each ambiguous value represents. Preserve placeholder names in translations.
+- Keep source text static for extraction. Explain what named placeholders represent, and list the possible values for fixed selectors. Preserve placeholder names in translations.
 - Write the complete message for each grammatical context instead of lowercasing, capitalizing, or inflecting an already translated label to fit another sentence.
 - Use safe rich-text interpolation rather than translated HTML passed to an unsafe renderer.
 
@@ -90,10 +92,11 @@ Localize user-visible errors at the presentation boundary, while preserving Engl
 - [ ] Same-text/different-description FormatJS messages generate different IDs. A no-transform setup fails tests for descriptors missing from its generated-ID map.
 - [ ] No new magic keys, sentence fragments, unlocalized UI states, or stale pretranslated constants.
 - [ ] Placeholders and ICU syntax compile; required translations are present rather than merely hidden by fallback.
+- [ ] Render every fixed wording variant in the source locale and an affected target locale. Check the whole phrase for agreement and register in its actual UI role; a successful compile does not check either.
 - [ ] Test the source locale and a target locale: plural boundaries, long text, accessible names, formatting, and switching locale without stale text. Check RTL when supported.
 - [ ] Review catalog diffs; do not overwrite human translations or prune against an incomplete extraction.
 - [ ] Switching viewer language leaves document data and exported wording unchanged; re-export uses stored artifact language and correct SVG/HTML `lang`.
 
 Run the repo's pipeline where available. Obtain permission before sending strings/context to a provider or incurring translation costs. Never fabricate translations or claim a check passed when credentials or infrastructure are missing.
 
-When choosing a reuse boundary, designing plurals/rich text, or needing library syntax, read [examples.md](examples.md) for concrete react-intl/Lingui examples.
+When choosing a reuse boundary, composing fixed choices, designing plurals/rich text, or needing library syntax, read [examples.md](examples.md).
