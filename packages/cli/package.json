@@ -25,6 +25,11 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p6t-polyglot/p6t.git",
+    "directory": "packages/cli"
+  },
   "publishConfig": {
     "access": "public"
   },
