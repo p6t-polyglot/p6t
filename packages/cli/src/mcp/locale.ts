@@ -86,7 +86,7 @@ export function prepareLocale(cwd: string, locale: string) {
   };
 }
 
-function placeholders(elements: MessageFormatElement[]) {
+export function placeholders(elements: MessageFormatElement[]) {
   const names = new Set<string>();
   function visit(nodes: MessageFormatElement[]) {
     for (const node of nodes) {

@@ -6,6 +6,7 @@ import type {
 } from "@p6t/config";
 import type {
   CatalogAdapter,
+  CatalogMessage,
   OrphanedTranslation,
   PendingTranslations,
   TranslationGroup,
@@ -40,6 +41,7 @@ type ReactIntlTargetCatalog = Record<string, ReactIntlTargetEntry>;
 
 interface ReactIntlCatalogAdapter extends CatalogAdapter {
   readStaleKeys(targetPath: string, sourcePath: string): OrphanedTranslation[];
+  readMessages(targetPath: string, sourcePath: string): CatalogMessage[];
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +162,29 @@ export function createReactIntlAdapter(
       const source = readCatalogForSync(sourcePath, "source");
       const target = readCatalogForSync(targetPath, "target") as ReactIntlTargetCatalog;
       return findStaleKeys(target, source);
+    },
+
+    readMessages(targetPath, sourcePath) {
+      const sourceCatalog = readCatalogForSync(sourcePath, "source");
+      const targetCatalog = targetPath === sourcePath
+        ? {}
+        : readCatalogForSync(targetPath, "target") as ReactIntlTargetCatalog;
+      const isRich = isRichCatalog(sourceCatalog);
+
+      return Object.entries(sourceCatalog).flatMap(([id, entry]) => {
+        const rich = isRich ? entry as ReactIntlSourceEntry : undefined;
+        const source = rich ? rich.defaultMessage : entry as unknown as string;
+        const target = targetCatalog[id];
+        const message: CatalogMessage = { id, source };
+        if (target && typeof target.defaultMessage === "string") {
+          message.translation = target.defaultMessage;
+        }
+        if (rich?.description) message.context = rich.description;
+        if (rich?.file != null && rich.line != null) {
+          message.references = [`${rich.file}:${rich.line}`];
+        }
+        return [message];
+      });
     },
 
     readPendingTranslations(targetPath: string, sourcePath: string): PendingTranslations {

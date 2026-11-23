@@ -34,6 +34,15 @@ export interface PendingTranslations {
   groups: TranslationGroup[];
 }
 
+/** A source message and its current translation, if one exists. */
+export interface CatalogMessage {
+  id: string;
+  source: string;
+  translation?: string;
+  context?: string;
+  references?: string[];
+}
+
 /** Format-agnostic seam for reading and writing translation catalogs. */
 export interface CatalogAdapter {
   /** Resolve absolute catalog file paths for a locale. */
