@@ -33,6 +33,8 @@ Refresh source catalog → prepare_locale (read only) → agent translates
 
 The agent uses its existing model. p6t still prunes obsolete keys when there’s nothing to translate. For a review without edits, ask the agent to report the plan only.
 
+For a specific copy change, `find_messages` searches exact source or translated text and returns catalog IDs and source locations. After confirming the intended message, `update_translation` can revise it by source text, current translation, or ID; it rejects ambiguous matches and validates ICU placeholders before writing.
+
 No skill is required. Ask the agent to use `inspect_project` when drafting or reviewing the project brief and locale guides. It returns a recipe for grounding the brief in product evidence and writing rules that change real translation decisions. Glossary suggestions stay in review until you approve a specific entry.
 
 ## Direct CLI
