@@ -127,7 +127,12 @@ it("does not treat malformed source data as an empty catalog", async () => {
   expect(JSON.parse(read("de.json"))).toHaveProperty("banner");
 });
 
-it("finds source and translated copy with locations and supports safe single-message edits", async () => {
+it("finds copy across target locales and supports safe batch edits", async () => {
+  put("i18n.json", {
+    version: 1, format: "react-intl",
+    locale: { source: "en", targets: ["de", "fr"] },
+    catalogs: [{ path: "{locale}.json" }],
+  });
   put("en.json", {
     save: { defaultMessage: "Save {name}", description: "Save button", file: "src/form.tsx", line: 12 },
     cancel: { defaultMessage: "Cancel", file: "src/form.tsx", line: 14 },
@@ -137,61 +142,87 @@ it("finds source and translated copy with locations and supports safe single-mes
     save: { defaultMessage: "{name} speichern", _p6t_source: "Save {name}", _p6t_description: "Save button" },
     cancel: { defaultMessage: "Abbrechen", _p6t_source: "Cancel" },
   });
+  put("fr.json", { save: { defaultMessage: "Enregistrer {name}" } });
 
-  const source = await client.callTool({ name: "find_messages", arguments: { text: "Save {name}", in: "source", locale: "de" } });
+  const source = await client.callTool({ name: "find_messages", arguments: { text: "Save {name}", in: "source" } });
   expect(source.structuredContent).toMatchObject({
     match: "exact",
     results: [
-      { catalog: "de.json", id: "save", source: "Save {name}", context: "Save button", translation: "{name} speichern", references: ["src/form.tsx:12"] },
-      { catalog: "de.json", id: "otherSave", source: "Save {name}", context: "Save menu item", references: ["src/menu.tsx:8"] },
+      {
+        id: "save", source: "Save {name}", context: "Save button", translations: { de: "{name} speichern", fr: "Enregistrer {name}" },
+        catalogs: { de: "de.json", fr: "fr.json" }, references: ["src/form.tsx:12"],
+      },
+      {
+        id: "otherSave", source: "Save {name}", context: "Save menu item", translations: {},
+        catalogs: { de: "de.json", fr: "fr.json" }, references: ["src/menu.tsx:8"],
+      },
     ],
   });
   const translated = await client.callTool({ name: "find_messages", arguments: { text: "speichern", in: "translation", locale: "de" } });
   expect(translated.structuredContent).toMatchObject({
     match: "partial",
-    results: [{ catalog: "de.json", id: "save", source: "Save {name}", translation: "{name} speichern" }],
+    results: [{ id: "save", source: "Save {name}", translations: { de: "{name} speichern" } }],
   });
+  const unknown = await client.callTool({ name: "find_messages", arguments: { text: "not present", in: "source" } });
+  expect(unknown.structuredContent).toMatchObject({ match: "none", results: [] });
 
   const ambiguous = await client.callTool({
-    name: "update_translation",
-    arguments: { locale: "de", source: "Save {name}", translation: "{name} sichern" },
+    name: "update_translations",
+    arguments: { locale: "de", updates: [{ source: "Save {name}", translation: "{name} sichern" }] },
   });
   expect(ambiguous.isError).toBe(true);
   expect(ambiguous.content).toEqual([expect.objectContaining({ text: expect.stringContaining("Ambiguous message") })]);
 
   const broken = await client.callTool({
-    name: "update_translation",
-    arguments: { locale: "de", id: "save", translation: "Sichern" },
+    name: "update_translations",
+    arguments: { locale: "de", updates: [{ id: "save", translation: "Sichern" }] },
   });
   expect(broken.isError).toBe(true);
   expect(JSON.parse(read("de.json")).save.defaultMessage).toBe("{name} speichern");
 
+  const invalidBatch = await client.callTool({
+    name: "update_translations",
+    arguments: { locale: "de", updates: [
+      { id: "save", translation: "{name} sichern" },
+      { id: "cancel", translation: "" },
+    ] },
+  });
+  expect(invalidBatch.isError).toBe(true);
+  expect(JSON.parse(read("de.json")).save.defaultMessage).toBe("{name} speichern");
+
   const updated = await client.callTool({
-    name: "update_translation",
-    arguments: { locale: "de", currentTranslation: "{name} speichern", translation: "{name} sichern" },
+    name: "update_translations",
+    arguments: { locale: "de", updates: [
+      { currentTranslation: "{name} speichern", translation: "{name} sichern" },
+      { id: "cancel", translation: "Abbrechen" },
+    ] },
   });
   expect(updated.isError).not.toBe(true);
   expect(updated.structuredContent).toMatchObject({
-    id: "save", previousTranslation: "{name} speichern", translation: "{name} sichern", references: ["src/form.tsx:12"],
+    updated: 2,
+    translations: [
+      { id: "save", previousTranslation: "{name} speichern", translation: "{name} sichern", references: ["src/form.tsx:12"] },
+      { id: "cancel", previousTranslation: "Abbrechen", translation: "Abbrechen" },
+    ],
   });
   expect(JSON.parse(read("de.json")).save).toEqual({
     defaultMessage: "{name} sichern", _p6t_source: "Save {name}", _p6t_description: "Save button",
   });
 });
 
-it("uses exact source selection and rejects updates to the source locale", async () => {
+it("supports source selection and rejects updates to the source locale", async () => {
   put("en.json", { welcome: { defaultMessage: "Welcome" } });
   put("de.json", { welcome: { defaultMessage: "Willkommen" } });
   const update = await client.callTool({
-    name: "update_translation",
-    arguments: { locale: "de", source: "Welcome", translation: "Guten Tag" },
+    name: "update_translations",
+    arguments: { locale: "de", updates: [{ source: "Welcome", translation: "Guten Tag" }] },
   });
   expect(update.isError).not.toBe(true);
   expect(JSON.parse(read("de.json")).welcome.defaultMessage).toBe("Guten Tag");
 
   const sourceUpdate = await client.callTool({
-    name: "update_translation",
-    arguments: { locale: "en", id: "welcome", translation: "Hi" },
+    name: "update_translations",
+    arguments: { locale: "en", updates: [{ id: "welcome", translation: "Hi" }] },
   });
   expect(sourceUpdate.isError).toBe(true);
   expect(JSON.parse(read("en.json")).welcome.defaultMessage).toBe("Welcome");

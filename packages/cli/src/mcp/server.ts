@@ -7,7 +7,7 @@ import { findConfigFile, loadConfig } from "../config/loader.ts";
 import { writeContextStubs, writeProjectConfig } from "../config/scaffold.ts";
 import { DRAFTING_GUIDE } from "../context/drafting.ts";
 import { applyLocale, prepareLocale } from "./locale.ts";
-import { findMessages, updateTranslation } from "./messages.ts";
+import { findMessages, updateTranslations } from "./messages.ts";
 
 const PREPARE_DESCRIPTION =
   "Inspect pending and obsolete messages after adding, changing, or removing user-facing copy in a p6t project, " +
@@ -29,8 +29,8 @@ export function createP6tMcpServer(cwd: string) {
       "For initial setup, call inspect_project, agree on locales and catalog paths with the user, then call init_project. " +
       "When drafting or reviewing the project brief or locale guides, use the drafting recipe in inspect_project. " +
       `${PREPARE_DESCRIPTION} Follow the next step in the plan returned by prepare_locale. ` +
-      "Use find_messages to locate copy by its exact source or translated text; it returns all matches and source references. " +
-      "Use update_translation only for a specifically identified message and an authorized correction; it validates ICU structure and writes one entry. " +
+      "Use find_messages to locate copy by its exact source or translated text; results include translations across configured locales. " +
+      "Use update_translations for authorized corrections; it validates the whole batch before writing and reports each change. " +
       "Report what was translated and pruned, what remains, and any glossary candidates for separate reviewer approval.",
   });
 
@@ -117,34 +117,36 @@ export function createP6tMcpServer(cwd: string) {
 
   server.registerTool("find_messages", {
     description:
-      "Find react-intl messages by source or translated text. Exact matches are preferred; if none exist, returns case-insensitive substring matches. Returns every match with catalog, ID, context and source references. For source searches, provide a target locale when you need the corresponding target catalog path for a later update. Read-only.",
+      "Find react-intl messages by source or translated text. Searches all configured target locales by default; provide locale to filter. Exact matches are preferred; if none exist, returns case-insensitive substring matches. Each match includes translations for that locale, catalog, ID, context and source references. Read-only.",
     inputSchema: {
       text: z.string().min(1),
-      in: z.enum(["source", "translation"]).describe("Which side of the message to search."),
-      locale: localeInput.optional().describe("Required for translation searches. For source searches, defaults to the source locale; provide a target locale to get its paired catalog path and current translation too."),
+      in: z.enum(["source", "translation"]).describe("Search the source string or target translation."),
+      locale: localeInput.optional().describe("Optional target locale filter. Omit to search all configured target locales."),
     },
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, ({ text, in: inField, locale }) => result(findMessages(cwd, text, inField, locale)));
 
-  server.registerTool("update_translation", {
+  server.registerTool("update_translations", {
     description:
-      "Update one authorized translation by its source text, current translated text, or stable message ID. Specify exactly one selector. Ambiguous selectors are rejected; use find_messages and then provide catalog and/or ID. Validates ICU placeholders and selectors. Writes only the selected translation; does not prune.",
+      "Update one or more authorized translations in one locale. For each update, specify exactly one selector: ID, exact source text, or exact current translation. Ambiguous selectors are rejected; use find_messages and then provide catalog and/or ID. The entire batch is validated before any catalog is written. Validates ICU placeholders and selectors. Does not prune.",
     inputSchema: {
       locale: localeInput,
-      translation: z.string(),
-      id: z.string().optional().describe("Stable message ID."),
-      source: z.string().optional().describe("Exact source-language text."),
-      currentTranslation: z.string().optional().describe("Exact current target-language text (compare-and-swap selector)."),
-      catalog: z.string().optional().describe("Project-relative target catalog path returned by find_messages."),
+      updates: z.array(z.object({
+        translation: z.string(),
+        id: z.string().optional().describe("Stable message ID."),
+        source: z.string().optional().describe("Exact source-language text."),
+        currentTranslation: z.string().optional().describe("Exact current target-language text (compare-and-swap selector)."),
+        catalog: z.string().optional().describe("Project-relative target catalog path returned by find_messages."),
+      })).min(1),
     },
     annotations: { destructiveHint: true, openWorldHint: false },
-  }, ({ locale, translation, id, source, currentTranslation, catalog }) =>
-    result(updateTranslation(cwd, locale, {
-      ...(id === undefined ? {} : { id }),
-      ...(source === undefined ? {} : { source }),
-      ...(currentTranslation === undefined ? {} : { currentTranslation }),
-      ...(catalog === undefined ? {} : { catalog }),
-    }, translation)));
+  }, ({ locale, updates }) => result(updateTranslations(cwd, locale, updates.map((update) => ({
+    translation: update.translation,
+    ...(update.id === undefined ? {} : { id: update.id }),
+    ...(update.source === undefined ? {} : { source: update.source }),
+    ...(update.currentTranslation === undefined ? {} : { currentTranslation: update.currentTranslation }),
+    ...(update.catalog === undefined ? {} : { catalog: update.catalog }),
+  })))));
 
   return server;
 }
